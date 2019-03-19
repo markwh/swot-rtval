@@ -30,8 +30,10 @@ ui <- fluidPage(
                                 title = "Select directory with rivertiles")),
         tabPanel("Map",
           actionButton("zoomButton", "Zoom to data"),
-          checkboxInput("pcv_plot", "Plot PIXCvec for selected nodes"),
-          checkboxInput("gdem_pcv_plot", "Plot gdem PIXCvec for selected nodes"),
+          checkboxInput("pcv_plot", "Plot PIXC(vec) for selected nodes"),
+          checkboxInput("gdem_pcv_plot", "Plot gdem PIXC(vec) for selected nodes"),
+          radioButtons("pcv_geoloc", "PIXC geolocation type", 
+                       choices = c(med = "medium", wd = "well-done (PIXCvec)")),
           leafletOutput("rtmap", height = 500)
         ),
         tabPanel("Plots",

@@ -8,16 +8,6 @@ library(leaflet)
 library(dplyr)
 library(plotly)
 
-# copied from https://stackoverflow.com/questions/42678858/q-q-plot-with-ggplot2stat-qq-colours-single-group
-my_stat_qq = function(data, colour.var) {
-  
-  data=cbind(data, setNames(qqnorm(data$.resid, plot.it=FALSE), c("Theoretical", "Sample")))
-  
-  ggplot(data) + 
-    geom_point(aes_string(x="Theoretical", y="Sample", colour=colour.var))
-  
-}
-# end copy
 
 devtools::load_all("../rivertile")
 
@@ -27,28 +17,21 @@ trybrowse <- function(expr) {
   out
 }
 
-# library(curl) # make the jsonlite suggested dependency explicit
+# Variable selection
+pixc_vars_tokeep <- c("azimuth_index", "range_index", "classification", 
+                      "num_rare_looks", "latitude", "longitude", "height", 
+                      "cross_track", "num_med_looks")
+pixcvec_vars_tokeep <- c("azimuth_index", "range_index", "latitude_vectorproc", 
+                         "longitude_vectorproc", "height_vectorproc", "node_index", 
+                         "reach_index")
 
-# # 1=South, 2=East, 3=West, 4=North
-# dirColors <-c("1"="#595490", "2"="#527525", "3"="#A93F35", "4"="#BA48AA")
+# Pixc(vec) color legend
+classes <- c(1, 2, 3, 4, 22, 23, 24)
+classlabs <- c("land", "land_near_water", "water_near_land", "open_water",
+              "land_near_dark_water", "dark_water_edge", "dark_water")
+classpal <- colorFactor(palette = "Set1", domain = classes)
 
-# # Download data from the Twin Cities Metro Transit API
-# # http://svc.metrotransit.org/NexTrip/help
-# getMetroData <- function(path) {
-#   url <- paste0("http://svc.metrotransit.org/NexTrip/", path, "?format=json")
-#   jsonlite::fromJSON(url)
-# }
-
-# # Load static trip and shape data
-# trips  <- readRDS("metrotransit-data/rds/trips.rds")
-# shapes <- readRDS("metrotransit-data/rds/shapes.rds")
-
-
-# Get the shape for a particular route. This isn't perfect. Each route has a
-# large number of different trips, and each trip can have a different shape.
-# This function simply returns the most commonly-used shape across all trips for
-# a particular route.
-
+# Data funcitons
 get_rivertile_data <- function(dir, truth = "gdem") {
   rt_nodes <- rt_read(path(dir, "rt.nc"), group = "nodes")
   rt_reaches <- rt_read(path(dir, "rt.nc"), group = "reaches")
@@ -57,12 +40,17 @@ get_rivertile_data <- function(dir, truth = "gdem") {
   gdem_reaches <- rt_read(path(dir, sprintf("rt_%s.nc", truth)), 
                           group = "reaches")
   
-  rt_pixc <- pixcvec_read(path(dir, "pcv.nc")) %>% 
+  rt_pixcvec <- pixcvec_read(path(dir, "pcv.nc"))[pixcvec_vars_tokeep] %>% 
     dplyr::rename(node_id = node_index, reach_id = reach_index)
   
-  gdem_pixc <- pixcvec_read(path(dir, sprintf("pcv_%s.nc", truth))) %>% 
+  gdem_pixcvec <- pixcvec_read(path(dir, sprintf("pcv_%s.nc", truth))) %>% 
+    `[`(pixcvec_vars_tokeep) %>% 
     dplyr::rename(node_id = node_index, reach_id = reach_index)
   
+  rt_pixc <- pixc_read(path(dir, "pixel_cloud.nc"))[pixc_vars_tokeep] %>% 
+    left_join(rt_pixcvec, y = ., by = c("azimuth_index", "range_index"))
+  gdem_pixc <- pixc_read(path(dir, "fake_pixc.nc"))[pixc_vars_tokeep] %>% 
+    inner_join(gdem_pixcvec, y = ., by = c("azimuth_index", "range_index"))
   
   out <- list(rt_nodes = rt_nodes, rt_reaches = rt_reaches, 
               gdem_nodes = gdem_nodes, gdem_reaches = gdem_reaches,
@@ -149,55 +137,21 @@ function(input, output, session) {
 
   #### MAPPING ####
 
-  # Locations of nodes for a particular case
-  riverNodeLocations <- reactive({
-    if (is.null(rtdata())) return(NULL)
-    # browser()
-    nodedf <- rtdata()$gdem_nodes
-    nodedf
-  })
-  
-  # Pixcvec circlemarkers
-  pcv_markers <- reactive({
-    if (!input$pcv_plot || length(input$selNodes) == 0) {
-      # Return identity function if nothing to add
-      return(function(x) x) 
-      }
-
-    plotdf <- rtdata()$rt_pixc %>% 
-      dplyr::filter(node_id %in% input$selNodes)
-    out <- function(x) {
-      addCircleMarkers(
-        x,
-        ~longitude_vectorproc, ~latitude_vectorproc,
-        popup = ~paste(sprintf("reach: %s\nnode: %s", reach_id, node_id)),
-        color = "green",
-        data = plotdf)
-    }
-  })
-  gdem_pcv_markers <- reactive({
-    if (!input$gdem_pcv_plot || length(input$selNodes) == 0) {
-      # Return identity function if nothing to add
-      return(function(x) x) 
-    }
-    
-    plotdf <- rtdata()$gdem_pixc %>% 
-      dplyr::filter(node_id %in% input$selNodes)
-    out <- function(x) {
-      addCircleMarkers(
-        x,
-        ~longitude_vectorproc, ~latitude_vectorproc,
-        popup = ~paste(sprintf("reach: %s\nnode: %s", reach_id, node_id)),
-        color = "red",
-        data = plotdf)
-    }
-  })
+  # Start with a base map including tiles and nodes. That's the leaflet() object.
+  # Everything beyond that will be added using leafletProxy(). 
   
   # Store last zoom button value so we can detect when it's clicked
   lastZoomButtonValue <- NULL
   
   output$rtmap <- renderLeaflet({
-
+    
+    rezoom <- "first"
+    # If zoom button was clicked this time, and store the value, and rezoom
+    if (!identical(lastZoomButtonValue, input$zoomButton)) {
+      lastZoomButtonValue <<- input$zoomButton
+      rezoom <- "always"
+    }
+    
     locations <- riverNodeLocations()    
     basemap <- leaflet(locations) %>% 
       addTiles()
@@ -205,29 +159,93 @@ function(input, output, session) {
     
     if (length(locations) == 0)
       return(basemap)
-
+    
     map <- basemap %>% 
       addCircleMarkers(
         ~longitude,
         ~latitude,
         popup = ~paste(sprintf("reach: %s\nnode: %s", reach_id, node_id)),
-        # color = ~dirPal(Direction),
         opacity = 0.8,
         radius = 2
       )
+    
+    map %>% mapOptions(zoomToLimits = rezoom)
+  })
+  
+  
+  # Locations of nodes for a particular case
+  riverNodeLocations <- reactive({
+    if (is.null(rtdata())) return(NULL)
+    nodedf <- rtdata()$gdem_nodes
+    nodedf
+  })
+  
+  # Data frames with locations of selected nodes' pixc(vec)
+  pcv_selected <- reactive({
+    
+    if (!input$pcv_plot) return(NULL)
+    
+    plotdf <- rtdata()$rt_pixc %>% 
+      dplyr::filter(node_id %in% input$selNodes)
+    
+    # Use well-done pixcvec locs if selected
+    if (input$pcv_geoloc == "wd") {
+      plotdf <- plotdf %>% 
+        dplyr::select(-latitude, -longitude) %>% 
+        dplyr::rename(plotdf, lat = latitude_vectorproc,
+                      lon = longitude_vectorproc)
+    } 
+    plotdf
+  })
+  # Data frame with locations of selected nodes' gdem pixc(vec)  
+  pcv_gdem_selected <- reactive({
+    
+    if (!input$gdem_pcv_plot) return(NULL)
+    
+    plotdf <- rtdata()$gdem_pixc %>% 
+      dplyr::filter(node_id %in% input$selNodes)
+    
+    # Use well-done pixcvec locs if selected
+    if (input$pcv_geoloc == "wd") {
+      plotdf <- plotdf %>% 
+        dplyr::select(-latitude, -longitude) %>% 
+        dplyr::rename(plotdf, lat = latitude_vectorproc,
+                      lon = longitude_vectorproc)
+    } 
+    plotdf
+  })
+  
 
-    rezoom <- "first"
-    # If zoom button was clicked this time, and store the value, and rezoom
-    if (!identical(lastZoomButtonValue, input$zoomButton)) {
-      lastZoomButtonValue <<- input$zoomButton
-      rezoom <- "always"
+  # Observer to add pcv points
+  observe({
+    if (is.null(pcv_selected()) || (nrow(pcv_selected()) == 0)) {
+      leafletProxy("rtmap")
+    } else {
+      # browser()
+      leafletProxy("rtmap") %>% 
+        # removeMarker(layerId = "pcv") %>%
+        addCircleMarkers(~longitude, ~latitude, 
+                         popup = ~paste(sprintf("reach: %s\nnode: %s", 
+                                                reach_id, node_id)),
+                         color = ~classpal(classification),
+                         # layerId = "pcv",
+                         data = pcv_selected()) 
     }
-
-    map <- map %>% 
-      pcv_markers()(.) %>% 
-      gdem_pcv_markers()(.) %>% 
-      mapOptions(zoomToLimits = rezoom)
-    map
+  })
+  
+  # Observer to add gdem pcv points
+  observe({
+    if (is.null(pcv_gdem_selected()) || (nrow(pcv_gdem_selected()) == 0)) {
+      leafletProxy("rtmap")
+    } else {
+      leafletProxy("rtmap", data = pcv_gdem_selected()) %>% 
+        removeMarker(layerId = "pcv_gdem") %>% 
+        addCircleMarkers(~longitude, ~latitude, 
+                         popup = ~paste(sprintf("reach: %s\nnode: %s", 
+                                                reach_id, node_id)),
+                         color = "red", 
+                         layerId = "pcv_gdem")  
+    }
   })
   
   #### VALIDATION ####
@@ -262,7 +280,6 @@ function(input, output, session) {
       ggplot() + 
       geom_point(aes(x = theoretical, y = rel_err, text = node_id, 
                      color = isSel, size = isSel)) +
-      # my_stat_qq(aes(sample = rel_err), isSel) +
       scale_color_manual(values = c("black", "red"), guide = FALSE) +
       scale_size_manual(values = c(1, 3), guide = FALSE) +
       facet_wrap(~variable)

@@ -24,7 +24,7 @@ ui <- fluidPage(
       actionButton("nodeRestore", "Restore All Nodes")
     ),
     mainPanel(
-      tabsetPanel(id = "inTabset", selected = "Plots",
+      tabsetPanel(id = "inTabset", selected = "Map",
         tabPanel("Data",
                  shinyDirButton('inputdir', label = "input select",
                                 title = "Select directory with rivertiles")),
@@ -34,7 +34,7 @@ ui <- fluidPage(
           checkboxInput("gdem_pcv_plot", "Plot gdem PIXC(vec) for selected nodes"),
           radioButtons("pcv_geoloc", "PIXC geolocation type", 
                        choices = c(med = "medium", wd = "well-done (PIXCvec)")),
-          leafletOutput("rtmap", height = 500)
+          leafletOutput("rtmap", height = 700)
         ),
         tabPanel("Plots",
            checkboxGroupInput("plot_vars", label = "Variables to Show",

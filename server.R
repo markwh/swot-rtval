@@ -72,7 +72,7 @@ purge_nodes <- function(rtdata, purgenodes = numeric(0)) {
 function(input, output, session) {
   
   #### DATA INPUT ####
-  defaultdir <- "~/Documents/swot-error/output"
+  defaultdir <- "../swot-error/output"
   roots <- c(home = defaultdir)
   shinyDirChoose(input, 'inputdir', roots = roots)
   
@@ -85,7 +85,7 @@ function(input, output, session) {
     
     ## REMOVEME
     if (is.null(input$dir)) {
-      parsed_dir <- "~/Documents/swot-error/output/sac04/"
+      parsed_dir <- "../swot-error/output/sac18/"
     }
     
     if (length(parsed_dir) == 0) return(NULL)
@@ -182,7 +182,7 @@ function(input, output, session) {
   
   # Data frames with locations of selected nodes' pixc(vec)
   pcv_selected <- reactive({
-    
+    input$pcv_geoloc
     if (!input$pcv_plot) return(NULL)
     
     plotdf <- rtdata()$rt_pixc %>% 
@@ -192,14 +192,14 @@ function(input, output, session) {
     if (input$pcv_geoloc == "wd") {
       plotdf <- plotdf %>% 
         dplyr::select(-latitude, -longitude) %>% 
-        dplyr::rename(plotdf, lat = latitude_vectorproc,
-                      lon = longitude_vectorproc)
+        dplyr::rename(plotdf, latitude = latitude_vectorproc,
+                      longitude = longitude_vectorproc)
     } 
     plotdf
   })
   # Data frame with locations of selected nodes' gdem pixc(vec)  
   pcv_gdem_selected <- reactive({
-    
+    input$pcv_geoloc
     if (!input$gdem_pcv_plot) return(NULL)
     
     plotdf <- rtdata()$gdem_pixc %>% 
@@ -209,8 +209,8 @@ function(input, output, session) {
     if (input$pcv_geoloc == "wd") {
       plotdf <- plotdf %>% 
         dplyr::select(-latitude, -longitude) %>% 
-        dplyr::rename(plotdf, lat = latitude_vectorproc,
-                      lon = longitude_vectorproc)
+        dplyr::rename(plotdf, latitude = latitude_vectorproc,
+                      longitude = longitude_vectorproc)
     } 
     plotdf
   })
@@ -218,33 +218,49 @@ function(input, output, session) {
 
   # Observer to add pcv points
   observe({
+    input$pcv_plot
     if (is.null(pcv_selected()) || (nrow(pcv_selected()) == 0)) {
-      leafletProxy("rtmap")
+      leafletProxy("rtmap") %>% 
+        clearGroup("pcv")
     } else {
       # browser()
-      leafletProxy("rtmap") %>% 
-        # removeMarker(layerId = "pcv") %>%
+      leafletProxy("rtmap", data = pcv_selected()) %>% 
+        clearGroup("pcv") %>% 
         addCircleMarkers(~longitude, ~latitude, 
                          popup = ~paste(sprintf("reach: %s\nnode: %s", 
                                                 reach_id, node_id)),
                          color = ~classpal(classification),
-                         # layerId = "pcv",
-                         data = pcv_selected()) 
+                         group = "pcv")
     }
   })
   
+  # Observer for pcv points legend
+  observe({
+    input$pcv_plot
+    proxy <- leafletProxy("rtmap", data = pcv_selected())
+    
+    # Remove any existing legend, and only if the legend is
+    # enabled, create a new one.
+    proxy %>% clearControls()
+    proxy %>% addLegend(position = "topright",
+                        colors = RColorBrewer::brewer.pal(7, "Set1"),
+      labels = c("land", "land_near_water", "water_near_land", "open_water",
+                 "land_near_dark_water", "dark_water_edge", "dark_water"))
+    })  
   # Observer to add gdem pcv points
   observe({
+    input$gdem_pcv_plot
     if (is.null(pcv_gdem_selected()) || (nrow(pcv_gdem_selected()) == 0)) {
-      leafletProxy("rtmap")
+      leafletProxy("rtmap") %>% 
+        clearGroup("pcv_gdem")
     } else {
       leafletProxy("rtmap", data = pcv_gdem_selected()) %>% 
-        removeMarker(layerId = "pcv_gdem") %>% 
+        clearGroup("pcv_gdem") %>% 
         addCircleMarkers(~longitude, ~latitude, 
                          popup = ~paste(sprintf("reach: %s\nnode: %s", 
                                                 reach_id, node_id)),
                          color = "red", 
-                         layerId = "pcv_gdem")  
+                         group = "pcv_gdem")  
     }
   })
   
@@ -264,8 +280,9 @@ function(input, output, session) {
                       center = input$hist_center, 
                       scale = input$hist_scale)
     gg$data <- mutate(gg$data, isSel = (node_id %in% input$selNodes))
-    gg <- gg + geom_rug(aes(size =  1 * (isSel)), color = "red") +
-      scale_size_identity()
+    # browser()
+    gg <- gg + geom_rug(aes(alpha = (isSel * 1)), color = "red", size = 1) +
+      scale_alpha_identity()
     gg
   })
   

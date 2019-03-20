@@ -25,6 +25,10 @@ pixcvec_vars_tokeep <- c("azimuth_index", "range_index", "latitude_vectorproc",
                          "longitude_vectorproc", "height_vectorproc", "node_index", 
                          "reach_index")
 
+# Colors
+nodecolor_unsel <- "#668cff"
+nodecolor_sel <- "#0039e6"
+
 # Pixc(vec) color legend
 classes <- c(1, 2, 3, 4, 22, 23, 24)
 classlabs <- c("land", "land_near_water", "water_near_land", "open_water",
@@ -58,6 +62,7 @@ get_rivertile_data <- function(dir, truth = "gdem") {
   out
 }
 
+#' Function to remove nodes from an rtdata set--that is, a list of data.frames.
 purge_nodes <- function(rtdata, purgenodes = numeric(0)) {
   if (length(purgenodes) == 0) return(rtdata)
   reachinds <- grep("reach", names(rtdata))
@@ -69,6 +74,9 @@ purge_nodes <- function(rtdata, purgenodes = numeric(0)) {
 }
 
 
+####------------------------------------
+#### START OF SERVER FUNCTION ----------
+####------------------------------------
 function(input, output, session) {
   
   #### DATA INPUT ####
@@ -76,27 +84,29 @@ function(input, output, session) {
   roots <- c(home = defaultdir)
   shinyDirChoose(input, 'inputdir', roots = roots)
   
-  purgedNodes <- numeric(0)
+  purgedNodes <- numeric(0) # Keep track of which nodes get manually purged
   
-  rtdata_full <- reactive({ 
-    dir <- input$inputdir
-    
-    parsed_dir <- parseDirPath(roots = roots, selection = dir)
-    
-    ## REMOVEME
-    if (is.null(input$dir)) {
+  datadir <- reactive({
+    if (is.null(input$dir)) { # REMOVE THIS LATER
       parsed_dir <- "../swot-error/output/sac18/"
+    } else {
+      dir <- input$inputdir
+      parsed_dir <- parseDirPath(roots = roots, selection = dir)
     }
+    parsed_dir
+  })
+  
+  # Full dataset from get_rivertile_data()
+  rtdata_full <- reactive({ 
     
-    if (length(parsed_dir) == 0) return(NULL)
+    if (length(datadir()) == 0) return(NULL)
     purgedNodes <<- numeric(0) # reset purgedNodes
     updateTabsetPanel(session, inputId = "inTabset", selected = "Map")
     
-    get_rivertile_data(dir = parsed_dir)
+    get_rivertile_data(dir = datadir())
     })
   
-  #### NODE SELECTION ####
-    
+  # Node selection and purging
   observeEvent(input$nodePurge, {
     purgedNodes <<- unique(c(purgedNodes, input$selNodes))
   })
@@ -106,7 +116,14 @@ function(input, output, session) {
   observeEvent(input$nodeSelClear, {
     updateCheckboxGroupInput(session, "selNodes", selected = character(0))
   })
-
+  observeEvent(input$flagtruth, {
+    # browser()
+    flagnodes <- flag_nodes(datadir())
+    tosel <- intersect(currentNodes(), flagnodes)
+    updateCheckboxGroupInput(session, "selNodes", selected = tosel)
+  })
+  
+  # Current dataset (subset of rtdata_full)
   rtdata <- reactive({
     if (is.null(rtdata_full())) return(NULL)
     
@@ -116,22 +133,25 @@ function(input, output, session) {
     out
   })
   
-  output$nodeSelect <- renderUI({
-    
+  currentNodes <- reactive({
     rtdat <- rtdata()
     if (is.null(rtdat)) {
       return(checkboxGroupInput("selNodes", "Node", choices = NULL, 
                                 inline = TRUE))
     }
-
+    
     nodeids1 <- rtdat$rt_nodes$node_id
     nodeids2 <- rtdat$gdem_nodes$node_id
     nodeNums <- sort(unique(as.numeric(c(nodeids1, nodeids2))))
-
     # Add names, so that we can add all=0
     names(nodeNums) <- nodeNums
     # nodeNums <- c(All = 0, nodeNums)
-    checkboxGroupInput("selNodes", "Node", choices = nodeNums, inline = TRUE)
+    nodeNums
+  })
+  
+  # dynamic UI element for node selection based on nodes in rtdata()
+  output$nodeSelect <- renderUI({
+    checkboxGroupInput("selNodes", "Node", choices = currentNodes(), inline = TRUE)
   })
   
 
@@ -139,12 +159,13 @@ function(input, output, session) {
 
   # Start with a base map including tiles and nodes. That's the leaflet() object.
   # Everything beyond that will be added using leafletProxy(). 
+  # Some of this is copied/modified from bus tracker app.
   
   # Store last zoom button value so we can detect when it's clicked
   lastZoomButtonValue <- NULL
   
+  # Base map with node locations and tiles
   output$rtmap <- renderLeaflet({
-    
     rezoom <- "first"
     # If zoom button was clicked this time, and store the value, and rezoom
     if (!identical(lastZoomButtonValue, input$zoomButton)) {
@@ -155,8 +176,7 @@ function(input, output, session) {
     locations <- riverNodeLocations()    
     basemap <- leaflet(locations) %>% 
       addTiles()
-    # addTiles('http://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png')
-    
+
     if (length(locations) == 0)
       return(basemap)
     
@@ -166,6 +186,7 @@ function(input, output, session) {
         ~latitude,
         popup = ~paste(sprintf("reach: %s\nnode: %s", reach_id, node_id)),
         opacity = 0.8,
+        color = nodecolor_unsel,
         radius = 2
       )
     
@@ -180,7 +201,7 @@ function(input, output, session) {
     nodedf
   })
   
-  # Data frames with locations of selected nodes' pixc(vec)
+  # Data frame with locations of selected nodes' pixc(vec)
   pcv_selected <- reactive({
     input$pcv_geoloc
     if (!input$pcv_plot) return(NULL)
@@ -226,10 +247,11 @@ function(input, output, session) {
       # browser()
       leafletProxy("rtmap", data = pcv_selected()) %>% 
         clearGroup("pcv") %>% 
-        addCircleMarkers(~longitude, ~latitude, 
+        addCircleMarkers(~longitude, ~latitude, stroke = FALSE,
+                         radius = 8, fillOpacity = 0.7, 
                          popup = ~paste(sprintf("reach: %s\nnode: %s", 
                                                 reach_id, node_id)),
-                         color = ~classpal(classification),
+                         fillColor = ~classpal(classification),
                          group = "pcv")
     }
   })
@@ -242,11 +264,25 @@ function(input, output, session) {
     # Remove any existing legend, and only if the legend is
     # enabled, create a new one.
     proxy %>% clearControls()
-    proxy %>% addLegend(position = "topright",
-                        colors = RColorBrewer::brewer.pal(7, "Set1"),
-      labels = c("land", "land_near_water", "water_near_land", "open_water",
-                 "land_near_dark_water", "dark_water_edge", "dark_water"))
-    })  
+    if (input$pcv_plot) {
+      proxy %>% addLegend(position = "topright",
+        colors = RColorBrewer::brewer.pal(7, "Set1"),
+        labels = c("land", "land_near_water", "water_near_land", "open_water",
+                   "land_near_dark_water", "dark_water_edge", "dark_water"))
+    }
+  })  
+  
+  # Observer for selected nodes
+  observe({
+    nodedat_ss <- riverNodeLocations() %>% 
+      dplyr::filter(node_id %in% input$selNodes)
+    leafletProxy("rtmap", data = nodedat_ss) %>% 
+      clearGroup("nodes_sel") %>% 
+      addCircleMarkers(lng = ~longitude, lat = ~latitude,
+                       radius = 2, color = nodecolor_sel, fillColor = NULL,
+                       group = "nodes_sel")
+  })
+  
   # Observer to add gdem pcv points
   observe({
     input$gdem_pcv_plot
@@ -256,9 +292,10 @@ function(input, output, session) {
     } else {
       leafletProxy("rtmap", data = pcv_gdem_selected()) %>% 
         clearGroup("pcv_gdem") %>% 
-        addCircleMarkers(~longitude, ~latitude, 
+        addCircleMarkers(~longitude, ~latitude, radius = 4, stroke = FALSE,
                          popup = ~paste(sprintf("reach: %s\nnode: %s", 
                                                 reach_id, node_id)),
+                         fillOpacity = 0.4,
                          color = "red", 
                          group = "pcv_gdem")  
     }
@@ -266,8 +303,7 @@ function(input, output, session) {
   
   #### VALIDATION ####
   
-  ### Data objects 
-  
+  # Data objects 
   valdata <- reactive({
     rt_valdata_df(obs = rtdata()$rt_nodes, truth = rtdata()$gdem_nodes)
   })
@@ -286,6 +322,7 @@ function(input, output, session) {
     gg
   })
   
+  # gg object--plotly object will use this
   val_qq_plot <- reactive({
     gg <- valdata() %>% 
       dplyr::filter(variable %in% input$plot_vars) %>% 
@@ -307,10 +344,12 @@ function(input, output, session) {
     gg
   })
   
+  # plotly object
   output$val_qq_plotly <- renderPlotly({
     ggplotly(val_qq_plot(), tooltip = "text")
   })
   
+  # gg object for scatterplot
   val_scatter_plot <- reactive({
     # browser() 
     plotdata <- valdata() %>% 
@@ -342,13 +381,13 @@ function(input, output, session) {
     gg
   })
   
+  # plotly render for scatterplot
   output$val_scatter_plotly <- renderPlotly({
     ggplotly(val_scatter_plot(), tooltip = "text")
   })
   
   
   # Stats tables --------
-  
   output$stat_table <- renderTable({
     stat_tbl <- valdata() %>% 
       mutate(pixc_relerr = pixc_err / sigma_est) %>% 
@@ -365,24 +404,16 @@ function(input, output, session) {
   })
   
   output$coverage_table <- renderTable({
-    covfun <- function(x, sigma, pctl) {
-      if (input$debias_table) x <- x - mean(x, na.rm = TRUE)
-      pctl <- pctl / 100
-      bnd <- -qnorm((1 - pctl) / 2, mean = 0, sd = 1)
-      numin <- sum(abs(x / sigma) <= bnd)
-      out <- numin / length(x) * 100
-      out
-    }
-    
-    stat_tbl <- valdata() %>% 
-      group_by(variable) %>% 
-      summarize(
-        `68 (1-sigma)` = covfun(pixc_err, sigma_est, 68),
-        `90` = covfun(pixc_err, sigma_est, 90),
-        `95 (2-sigma)` = covfun(pixc_err, sigma_est, 95),
-        `99` = covfun(pixc_err, sigma_est, 99)
-      )
+    stat_tbl <- val_coverage(valdata()) %>% 
+      rename(`68 (1-sigma)` = ci68,
+             `90` = ci90,
+             `95 (2-sigma)` = ci95,
+             `99` = ci99)
     stat_tbl
-    # DT::datatable(stat_tbl)
+  })
+  
+  output$hyptest_table <- renderTable({
+    htdf <- rt_hyptest(valdata(), debias = input$debias_hyptest)
+    htdf
   })
 }

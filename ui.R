@@ -21,7 +21,8 @@ ui <- fluidPage(
       actionButton("nodeSelClear", "Clear Selected Nodes"),
       uiOutput("nodeSelect", inline = TRUE),
       actionButton("nodePurge", "Remove Selected Nodes"),
-      actionButton("nodeRestore", "Restore All Nodes")
+      actionButton("nodeRestore", "Restore All Nodes"), 
+      actionButton("flagtruth", "Auto-select nodes with ambiguous truth")
     ),
     mainPanel(
       tabsetPanel(id = "inTabset", selected = "Map",
@@ -61,11 +62,21 @@ ui <- fluidPage(
              )
           ),
         tabPanel("Stats", 
-                 h2("Statistics"),
-                 tableOutput("stat_table"),
-                 h2("Coverage Rates"),
-                 checkboxInput("debias_table", "Adjust Bias"),
-                 tableOutput("coverage_table")),
+                 tabsetPanel(
+                   tabPanel("Summary Stats", 
+                            h2("Statistics"),
+                            tableOutput("stat_table")
+                            ),
+                   tabPanel("Coverage", 
+                            h2("Coverage Rates"),
+                            checkboxInput("debias_table", "Adjust Bias"),
+                            tableOutput("coverage_table")
+                            ),
+                   tabPanel("Hypothesis Test",
+                            checkboxInput("debias_hyptest", "Adjust Bias"),
+                            tableOutput("hyptest_table"))
+                            )
+                 ),
         tabPanel("Settings",
                  numericInput("maxmappts", "Maximum points to render on map", 
                               value = 3000, min = 1, step = 1000),

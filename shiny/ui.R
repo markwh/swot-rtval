@@ -1,4 +1,4 @@
-library(shinydashboard)
+# library(shinydashboard)
 library(shinyFiles)
 library(leaflet)
 library(plotly)
@@ -8,7 +8,7 @@ library(plotly)
 # )
 
 val_vars <- c("height", "height2", "width", "area_total", "area_detct", 
-              "latitude", "longitude")
+              "slope")
 scatter_vars <- c("Node ID" = "node_id", "No. Pixels" = "n_good_pix", 
                   "X-track Distance" = "xtrk_dist", 
                   "Est. Uncertainty" = "sigma_est")
@@ -19,6 +19,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       actionButton("nodeSelClear", "Clear Selected Nodes"),
+      checkboxInput("showReaches", "Show Reaches", value = FALSE),
       uiOutput("nodeSelect", inline = TRUE),
       actionButton("nodePurge", "Remove Selected Nodes"),
       actionButton("nodeRestore", "Restore All Nodes"), 
@@ -28,7 +29,8 @@ ui <- fluidPage(
       tabsetPanel(id = "inTabset", selected = "Map",
         tabPanel("Data",
                  shinyDirButton('inputdir', label = "input select",
-                                title = "Select directory with rivertiles")),
+                                title = "Select directory with rivertiles")
+        ),
         tabPanel("Map",
           actionButton("zoomButton", "Zoom to data"),
           checkboxInput("pcv_plot", "Plot PIXC(vec) for selected nodes"),
@@ -38,9 +40,9 @@ ui <- fluidPage(
           leafletOutput("rtmap", height = 700)
         ),
         tabPanel("Plots",
-           checkboxGroupInput("plot_vars", label = "Variables to Show",
-                              choices = val_vars, inline = TRUE,
-                              selected = c("height", "width", "area_total")),
+          checkboxGroupInput("plot_vars", label = "Variables to Show",
+                             choices = val_vars, inline = TRUE,
+                                selected = c("height", "width", "area_total"))),
            tabsetPanel(
              tabPanel("Histogram",
                     checkboxInput("hist_center", label = "Center Histogram"),
@@ -59,7 +61,6 @@ ui <- fluidPage(
                                    choiceNames = names(scatter_vars),
                                    choiceValues = unname(scatter_vars)),
                       plotlyOutput("val_scatter_plotly"))
-             )
           ),
         tabPanel("Stats", 
                  tabsetPanel(

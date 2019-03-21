@@ -1,6 +1,6 @@
-library(shinydashboard)
+# library(shinydashboard)
 library(shinyFiles)
-# library(rivertile)
+library(rivertile)
 library(ncdf4)
 library(fs)
 library(ggplot2)
@@ -9,7 +9,7 @@ library(dplyr)
 library(plotly)
 
 
-devtools::load_all("../rivertile")
+# devtools::load_all("../rivertile")
 
 trybrowse <- function(expr) {
   out <- try(expr)
@@ -80,7 +80,7 @@ purge_nodes <- function(rtdata, purgenodes = numeric(0)) {
 function(input, output, session) {
   
   #### DATA INPUT ####
-  defaultdir <- "../swot-error/output"
+  defaultdir <- "../data"
   roots <- c(home = defaultdir)
   shinyDirChoose(input, 'inputdir', roots = roots)
   
@@ -88,7 +88,7 @@ function(input, output, session) {
   
   datadir <- reactive({
     if (is.null(input$dir)) { # REMOVE THIS LATER
-      parsed_dir <- "../swot-error/output/sac18/"
+      parsed_dir <- "../data/sac18/"
     } else {
       dir <- input$inputdir
       parsed_dir <- parseDirPath(roots = roots, selection = dir)
@@ -154,17 +154,28 @@ function(input, output, session) {
     checkboxGroupInput("selNodes", "Node", choices = currentNodes(), inline = TRUE)
   })
   
+  
+  # Color palette for reaches
+  reachpal <- reactive({
+    reachids <- sort(unique(rtdata_full()$rt_reaches$reach_id))
+    nreaches <- length(reachids)
+    # viridisLite::viridis(n = nreaches) 
+    dkcols <- RColorBrewer::brewer.pal(n = 8, name = "Set3")
+    pal <- leaflet::colorNumeric(palette = rep(dkcols, length.out = nreaches), 
+                                 domain = reachids)
+    pal
+  })
 
   #### MAPPING ####
 
-  # Start with a base map including tiles and nodes. That's the leaflet() object.
+  # Start with a base map including tiles only. That's the leaflet() object.
   # Everything beyond that will be added using leafletProxy(). 
   # Some of this is copied/modified from bus tracker app.
   
   # Store last zoom button value so we can detect when it's clicked
   lastZoomButtonValue <- NULL
   
-  # Base map with node locations and tiles
+  # Base map with tiles only
   output$rtmap <- renderLeaflet({
     rezoom <- "first"
     # If zoom button was clicked this time, and store the value, and rezoom
@@ -174,23 +185,20 @@ function(input, output, session) {
     }
     
     locations <- riverNodeLocations()    
+    minlat <- min(locations$latitude)
+    maxlat <- max(locations$latitude)
+    minlon <- min(locations$longitude)
+    maxlon <- max(locations$longitude)
     basemap <- leaflet(locations) %>% 
-      addTiles()
+      addTiles() %>% 
+      fitBounds(minlon, minlat, maxlon, maxlat)
 
     if (length(locations) == 0)
       return(basemap)
     
-    map <- basemap %>% 
-      addCircleMarkers(
-        ~longitude,
-        ~latitude,
-        popup = ~paste(sprintf("reach: %s\nnode: %s", reach_id, node_id)),
-        opacity = 0.8,
-        color = nodecolor_unsel,
-        radius = 2
-      )
     
-    map %>% mapOptions(zoomToLimits = rezoom)
+    
+    basemap %>% mapOptions(zoomToLimits = rezoom)
   })
   
   
@@ -199,6 +207,35 @@ function(input, output, session) {
     if (is.null(rtdata())) return(NULL)
     nodedf <- rtdata()$gdem_nodes
     nodedf
+  })
+  
+  # Observer for node locations
+  observe({
+    
+    locations <- riverNodeLocations()    
+    if (length(locations) == 0)
+      return(leafletProx("rtmap"))
+    if (input$showReaches) {
+      leafletProxy("rtmap", data = locations) %>% 
+        addCircleMarkers(
+          ~longitude,
+          ~latitude,
+          popup = ~paste(sprintf("reach: %s\nnode: %s", reach_id, node_id)),
+          opacity = 0.8,
+          color = ~reachpal()(reach_id),
+          radius = 2
+        ) 
+    } else {
+      leafletProxy("rtmap", data = locations) %>% 
+        addCircleMarkers(
+          ~longitude,
+          ~latitude,
+          popup = ~paste(sprintf("reach: %s\nnode: %s", reach_id, node_id)),
+          opacity = 0.8,
+          color = nodecolor_unsel,
+          radius = 2
+        )
+    }
   })
   
   # Data frame with locations of selected nodes' pixc(vec)
@@ -304,44 +341,61 @@ function(input, output, session) {
   #### VALIDATION ####
   
   # Data objects 
-  valdata <- reactive({
+  valdata_node <- reactive({
     rt_valdata_df(obs = rtdata()$rt_nodes, truth = rtdata()$gdem_nodes)
+  })
+  valdata_reach <- reactive({
+    rt_valdata_df(obs = rtdata()$rt_reaches, truth = rtdata()$gdem_reaches)
   })
   
   ## Plots
   output$val_hist <- renderPlot({
-    # browser()
-    gg <- rt_val_hist(valdata(), vars = input$plot_vars,
+    plotdata <- valdata_node() %>% 
+      mutate(plotcolor = reachpal()(reach_id))
+    if (!input$showReaches) {
+      plotdata$plotcolor = nodecolor_sel
+    }
+    
+    gg <- rt_val_hist(plotdata, vars = input$plot_vars,
                       curve = input$hist_curve,
                       center = input$hist_center, 
                       scale = input$hist_scale)
     gg$data <- mutate(gg$data, isSel = (node_id %in% input$selNodes))
     # browser()
-    gg <- gg + geom_rug(aes(alpha = (isSel * 1)), color = "red", size = 1) +
-      scale_alpha_identity()
+    gg <- gg + geom_rug(aes(alpha = (isSel * 1), color = plotcolor), 
+                        size = 1) +
+      scale_alpha_identity() +
+      scale_color_identity()
     gg
   })
   
   # gg object--plotly object will use this
   val_qq_plot <- reactive({
-    gg <- valdata() %>% 
+    # browser()
+    plotdata_node <- valdata_node() %>% 
       dplyr::filter(variable %in% input$plot_vars) %>% 
       mutate(isSel = (node_id %in% input$selNodes),
-             rel_err = pixc_err / sigma_est) %>% 
+             rel_err = pixc_err / sigma_est,
+             plotcolor = case_when(
+               input$showReaches ~ reachpal()(reach_id),
+               !input$showReaches & isSel ~ nodecolor_sel, 
+               !input$showReaches & !isSel ~ nodecolor_unsel)) %>% 
       group_by(variable) %>% 
       mutate(theoretical = qqnorm(rel_err, plot.it = FALSE)$x) %>% 
-      ungroup() %>% 
-      ggplot() + 
-      geom_point(aes(x = theoretical, y = rel_err, text = node_id, 
-                     color = isSel, size = isSel)) +
-      scale_color_manual(values = c("black", "red"), guide = FALSE) +
+      ungroup()
+    
+    gg <- ggplot(plotdata_node, 
+                 aes(x = theoretical, y = rel_err, color = plotcolor)) + 
+      geom_point(aes(text = node_id, size = isSel)) +
+      scale_color_identity(guide = FALSE) +
       scale_size_manual(values = c(1, 3), guide = FALSE) +
-      facet_wrap(~variable)
+      facet_wrap(~variable, scales = "free_y")
     
     if (input$qq_line) {
       gg <- gg + geom_abline(slope = 1, intercept = 0)
     }
-    gg
+
+    gg + theme(legend.position = "none")
   })
   
   # plotly object
@@ -351,12 +405,17 @@ function(input, output, session) {
   
   # gg object for scatterplot
   val_scatter_plot <- reactive({
-    # browser() 
-    plotdata <- valdata() %>% 
+
+    plotdata <- valdata_node() %>% 
       dplyr::filter(variable %in% input$plot_vars) %>% 
       dplyr::mutate(isSel = (node_id %in% input$selNodes),
-                    rel_err = pixc_err / sigma_est)
+                    rel_err = pixc_err / sigma_est,
+                    plotcolor = case_when(
+                      input$showReaches ~ reachpal()(reach_id),
+                      !input$showReaches & isSel ~ nodecolor_sel, 
+                      !input$showReaches & !isSel ~ nodecolor_unsel))
     
+    # Manually add in the selected x and y axis variable names
     plotdata$yvalue <- plotdata[[input$scatter_y]]
     plotdata$xvalue <- plotdata[[input$scatter_x]]
     if (input$scatter_y == "pixc_val") {
@@ -366,19 +425,59 @@ function(input, output, session) {
       plotdata$ysigma <- 1 
     } else {plotdata$ysigma <- plotdata$sigma_est}
     
+    # create the plot
     gg <- ggplot(plotdata, aes(x = xvalue)) +
       geom_ribbon(aes(ymin = ymiddle - 1.96 * ysigma, 
                       ymax = ymiddle + 1.96 * ysigma), 
                   fill = "pink") +
       geom_ribbon(aes(ymin = ymiddle - ysigma, ymax = ymiddle + ysigma), 
                   fill = "#7780ff") +
-      geom_point(aes(y = yvalue, color = isSel, size = isSel, text = node_id)) +
-      scale_color_manual(values = c("#333333", "red"), guide = FALSE) +
+      geom_point(aes(y = yvalue, color = plotcolor, size = isSel, text = node_id)) +
+      scale_color_identity(guide = FALSE) +
       scale_size_manual(values = c(1, 3), guide = FALSE) +
       facet_wrap(~variable, scales = "free") +
       ylab(input$scatter_y) + xlab(input$scatter_x)
     
-    gg
+    # Overlay reach data
+    if (input$showReaches) {
+      
+      # need a node_id for reaches (use median)
+      nodeiddf <- plotdata %>% 
+        group_by(reach_id) %>% 
+        summarize(node_id = median(node_id))
+      
+      plotdata_reach <- valdata_reach() %>% 
+        left_join(nodeiddf, by = "reach_id") %>% 
+        dplyr::filter(variable %in% input$plot_vars) %>% 
+        mutate(plotcolor = reachpal()(reach_id), 
+               rel_err = pixc_err / sigma_est)
+      plotdata_reach$yvalue <- plotdata_reach[[input$scatter_y]]
+      plotdata_reach$xvalue <- plotdata_reach[[input$scatter_x]]
+      
+      if (input$scatter_y == "pixc_val") {
+        plotdata_reach$ymiddle <- plotdata_reach$gdem_val 
+      } else {plotdata_reach$ymiddle <- 0}
+      if (input$scatter_y == "rel_err") {
+        plotdata_reach$ysigma <- 1 
+      } else {plotdata_reach$ysigma <- plotdata_reach$sigma_est}
+      
+      gg <- gg + 
+        geom_linerange(aes(ymin = ymiddle - 1.96 * ysigma,
+                           ymax = ymiddle + 1.96 * ysigma),
+                       size = 0.5, data = plotdata_reach, 
+                       color = "#b3b3b3") +
+        geom_linerange(aes(ymin = ymiddle - ysigma,
+                           ymax = ymiddle + ysigma),
+                        size = 1, data = plotdata_reach,
+                       color = "#666666") +
+        geom_point(aes(y = yvalue, 
+                       color = plotcolor,
+                       text = paste0("Reach: ", reach_id)), 
+                   size = 5, data = plotdata_reach)
+    }
+    
+    
+    gg + theme(legend.position = "none")
   })
   
   # plotly render for scatterplot
@@ -389,7 +488,7 @@ function(input, output, session) {
   
   # Stats tables --------
   output$stat_table <- renderTable({
-    stat_tbl <- valdata() %>% 
+    stat_tbl <- valdata_node() %>% 
       mutate(pixc_relerr = pixc_err / sigma_est) %>% 
       group_by(variable) %>% 
       summarize(bias = mean(pixc_err),
@@ -404,7 +503,7 @@ function(input, output, session) {
   })
   
   output$coverage_table <- renderTable({
-    stat_tbl <- val_coverage(valdata()) %>% 
+    stat_tbl <- val_coverage(valdata_node()) %>% 
       rename(`68 (1-sigma)` = ci68,
              `90` = ci90,
              `95 (2-sigma)` = ci95,
@@ -413,7 +512,7 @@ function(input, output, session) {
   })
   
   output$hyptest_table <- renderTable({
-    htdf <- rt_hyptest(valdata(), debias = input$debias_hyptest)
+    htdf <- rt_hyptest(valdata_node(), debias = input$debias_hyptest)
     htdf
   })
 }

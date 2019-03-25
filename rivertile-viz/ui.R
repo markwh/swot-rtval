@@ -1,19 +1,3 @@
-# library(shinydashboard)
-library(shinyFiles)
-library(leaflet)
-library(plotly)
-
-# header <- dashboardHeader(
-#   title = "Rivertile Validation"
-# )
-
-val_vars <- c("height", "height2", "width", "area_total", "area_detct", 
-              "slope")
-scatter_vars <- c("Node ID" = "node_id", "No. Pixels" = "n_good_pix", 
-                  "X-track Distance" = "xtrk_dist", 
-                  "Est. Uncertainty" = "sigma_est")
-
-theme_set(theme_bw())
 
 ui <- fluidPage(
   sidebarLayout(
@@ -38,6 +22,7 @@ ui <- fluidPage(
           radioButtons("pcv_geoloc", "PIXC geolocation type", 
                        choices = c(med = "medium", wd = "well-done (PIXCvec)")),
           leafletOutput("rtmap", height = 700)
+          
         ),
         tabPanel("Plots",
           checkboxGroupInput("plot_vars", label = "Variables to Show",

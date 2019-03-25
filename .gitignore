@@ -3,3 +3,6 @@
 .RData
 .Ruserdata
 data
+rivertile-viz/data
+rivertile-viz/cache
+rivertile-viz/rsconnect

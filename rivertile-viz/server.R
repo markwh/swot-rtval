@@ -1,76 +1,9 @@
-# library(shinydashboard)
-library(shinyFiles)
-library(rivertile)
-library(ncdf4)
-library(fs)
-library(ggplot2)
-library(leaflet)
-library(dplyr)
-library(plotly)
 
-
-# devtools::load_all("../rivertile")
-
-trybrowse <- function(expr) {
-  out <- try(expr)
-  if (is(out, "try-error")) browser()
-  out
-}
-
-# Variable selection
-pixc_vars_tokeep <- c("azimuth_index", "range_index", "classification", 
-                      "num_rare_looks", "latitude", "longitude", "height", 
-                      "cross_track", "num_med_looks")
-pixcvec_vars_tokeep <- c("azimuth_index", "range_index", "latitude_vectorproc", 
-                         "longitude_vectorproc", "height_vectorproc", "node_index", 
-                         "reach_index")
-
-# Colors
-nodecolor_unsel <- "#668cff"
-nodecolor_sel <- "#0039e6"
-
-# Pixc(vec) color legend
-classes <- c(1, 2, 3, 4, 22, 23, 24)
-classlabs <- c("land", "land_near_water", "water_near_land", "open_water",
-              "land_near_dark_water", "dark_water_edge", "dark_water")
-classpal <- colorFactor(palette = "Set1", domain = classes)
-
-# Data funcitons
-get_rivertile_data <- function(dir, truth = "gdem") {
-  rt_nodes <- rt_read(path(dir, "rt.nc"), group = "nodes")
-  rt_reaches <- rt_read(path(dir, "rt.nc"), group = "reaches")
-  gdem_nodes <- rt_read(path(dir, sprintf("rt_%s.nc", truth)), 
-                        group = "nodes")
-  gdem_reaches <- rt_read(path(dir, sprintf("rt_%s.nc", truth)), 
-                          group = "reaches")
-  
-  rt_pixcvec <- pixcvec_read(path(dir, "pcv.nc"))[pixcvec_vars_tokeep] %>% 
-    dplyr::rename(node_id = node_index, reach_id = reach_index)
-  
-  gdem_pixcvec <- pixcvec_read(path(dir, sprintf("pcv_%s.nc", truth))) %>% 
-    `[`(pixcvec_vars_tokeep) %>% 
-    dplyr::rename(node_id = node_index, reach_id = reach_index)
-  
-  rt_pixc <- pixc_read(path(dir, "pixel_cloud.nc"))[pixc_vars_tokeep] %>% 
-    left_join(rt_pixcvec, y = ., by = c("azimuth_index", "range_index"))
-  gdem_pixc <- pixc_read(path(dir, "fake_pixc.nc"))[pixc_vars_tokeep] %>% 
-    inner_join(gdem_pixcvec, y = ., by = c("azimuth_index", "range_index"))
-  
-  out <- list(rt_nodes = rt_nodes, rt_reaches = rt_reaches, 
-              gdem_nodes = gdem_nodes, gdem_reaches = gdem_reaches,
-              rt_pixc = rt_pixc, gdem_pixc = gdem_pixc)
-  out
-}
-
-#' Function to remove nodes from an rtdata set--that is, a list of data.frames.
-purge_nodes <- function(rtdata, purgenodes = numeric(0)) {
-  if (length(purgenodes) == 0) return(rtdata)
-  reachinds <- grep("reach", names(rtdata))
-  purgefun <- function(x) x[!(x[["node_id"]] %in% purgenodes), ]
-  
-  out <- rtdata
-  out[-reachinds] <- lapply(rtdata[-reachinds], purgefun)
-  out
+# Option to use cached data instead of reading netcdf. If not NULL, netcdf reading won't 
+# proceed
+cachedir <- "./cache"
+for (file in list.files(cachedir, full.names = TRUE)) {
+  load(file)
 }
 
 
@@ -80,7 +13,7 @@ purge_nodes <- function(rtdata, purgenodes = numeric(0)) {
 function(input, output, session) {
   
   #### DATA INPUT ####
-  defaultdir <- "../data"
+  defaultdir <- "./data"
   roots <- c(home = defaultdir)
   shinyDirChoose(input, 'inputdir', roots = roots)
   
@@ -88,7 +21,7 @@ function(input, output, session) {
   
   datadir <- reactive({
     if (is.null(input$dir)) { # REMOVE THIS LATER
-      parsed_dir <- "../data/sac18/"
+      parsed_dir <- "./data/sac18/"
     } else {
       dir <- input$inputdir
       parsed_dir <- parseDirPath(roots = roots, selection = dir)
@@ -98,6 +31,9 @@ function(input, output, session) {
   
   # Full dataset from get_rivertile_data()
   rtdata_full <- reactive({ 
+    
+    if (exists("rtdata_default") && 
+        is.null(input$dir)) return(rtdata_default)
     
     if (length(datadir()) == 0) return(NULL)
     purgedNodes <<- numeric(0) # reset purgedNodes
@@ -117,8 +53,12 @@ function(input, output, session) {
     updateCheckboxGroupInput(session, "selNodes", selected = character(0))
   })
   observeEvent(input$flagtruth, {
-    # browser()
-    flagnodes <- flag_nodes(datadir())
+    if (exists("badnodes_default") && 
+        is.null(input$dir)) {
+      flagnodes <- badnodes_default
+    } else {
+      flagnodes <- flag_nodes(datadir())
+    }
     tosel <- intersect(currentNodes(), flagnodes)
     updateCheckboxGroupInput(session, "selNodes", selected = tosel)
   })
@@ -226,6 +166,7 @@ function(input, output, session) {
           radius = 2
         ) 
     } else {
+      # browser()
       leafletProxy("rtmap", data = locations) %>% 
         addCircleMarkers(
           ~longitude,
@@ -313,6 +254,7 @@ function(input, output, session) {
   observe({
     nodedat_ss <- riverNodeLocations() %>% 
       dplyr::filter(node_id %in% input$selNodes)
+    # browser()
     leafletProxy("rtmap", data = nodedat_ss) %>% 
       clearGroup("nodes_sel") %>% 
       addCircleMarkers(lng = ~longitude, lat = ~latitude,

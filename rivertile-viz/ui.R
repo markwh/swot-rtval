@@ -27,7 +27,7 @@ ui <- fluidPage(
         tabPanel("Plots",
           checkboxGroupInput("plot_vars", label = "Variables to Show",
                              choices = val_vars, inline = TRUE,
-                                selected = c("height", "width", "area_total"))),
+                                selected = c("height", "width", "area_total")),
            tabsetPanel(
              tabPanel("Histogram",
                     checkboxInput("hist_center", label = "Center Histogram"),
@@ -46,7 +46,8 @@ ui <- fluidPage(
                                    choiceNames = names(scatter_vars),
                                    choiceValues = unname(scatter_vars)),
                       plotlyOutput("val_scatter_plotly"))
-          ),
+          )
+        ),
         tabPanel("Stats", 
                  tabsetPanel(
                    tabPanel("Summary Stats", 

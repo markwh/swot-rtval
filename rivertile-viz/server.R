@@ -1,11 +1,21 @@
 
 # Option to use cached data instead of reading netcdf. If not NULL, netcdf reading won't 
 # proceed
-cachedir <- "./cache"
-for (file in list.files(cachedir, full.names = TRUE)) {
-  load(file)
+# cachedir <- "./cache"
+# for (file in list.files(cachedir, full.names = TRUE)) {
+#   load(file)
+# }
+
+
+# This function, modified from http://www.r-bloggers.com/safe-loading-of-rdata-files/, load the Rdata into a new environment to avoid side effects
+LoadToEnvironment <- function(url, env=new.env()) {
+  load(url(url), env)
+  return(env)
 }
 
+
+load(url("https://osu.box.com/shared/static/9ng2ys6kubcbkqu8riar0l89uzk101zr.rdata"))
+run_manifest <- read.csv("./roruns.csv", stringsAsFactors = FALSE)
 
 ####------------------------------------
 #### START OF SERVER FUNCTION ----------
@@ -13,27 +23,43 @@ for (file in list.files(cachedir, full.names = TRUE)) {
 function(input, output, session) {
   
   #### DATA INPUT ####
+  
+  # Table of riverobs runs
+  output$runs_table <- renderDataTable({
+    run_manifest %>% 
+      dplyr::transmute(run_id = outno, 
+                       priordb = gsub("$PRIORLOC", "", priordb, fixed = TRUE), 
+                       case, pass, day = bndry_cond, 
+                       smearing, land_sig0, water_sig0, 
+                       gdem_preproc = grepl("preproc", gdem_name), notes) %>% 
+      datatable(filter = "top")
+  })
+  
+  # 
+  
   defaultdir <- "./data"
   roots <- c(home = defaultdir)
   shinyDirChoose(input, 'inputdir', roots = roots)
   
-  purgedNodes <- numeric(0) # Keep track of which nodes get manually purged
   
   datadir <- reactive({
     if (is.null(input$dir)) { # REMOVE THIS LATER
-      parsed_dir <- "./data/sac18/"
+      parsed_dir <- "./data/sac188/"
     } else {
       dir <- input$inputdir
       parsed_dir <- parseDirPath(roots = roots, selection = dir)
     }
     parsed_dir
   })
+
+  
+  purgedNodes <- numeric(0) # Keep track of which nodes get manually purged
   
   # Full dataset from get_rivertile_data()
   rtdata_full <- reactive({ 
     
-    if (exists("rtdata_default") && 
-        is.null(input$dir)) return(rtdata_default)
+    if (exists("rtdata_in") && 
+        is.null(input$dir)) return(rtdata_in)
     
     if (length(datadir()) == 0) return(NULL)
     purgedNodes <<- numeric(0) # reset purgedNodes
@@ -53,9 +79,9 @@ function(input, output, session) {
     updateCheckboxGroupInput(session, "selNodes", selected = character(0))
   })
   observeEvent(input$flagtruth, {
-    if (exists("badnodes_default") && 
+    if (exists("badnodes_in") && 
         is.null(input$dir)) {
-      flagnodes <- badnodes_default
+      flagnodes <- badnodes_in
     } else {
       flagnodes <- flag_nodes(datadir())
     }

@@ -1,5 +1,5 @@
 
-ui <- fluidPage(
+ui <- fluidPage(theme = shinytheme("sandstone"),
   sidebarLayout(
     sidebarPanel(
       actionButton("nodeSelClear", "Clear Selected Nodes"),
@@ -12,8 +12,14 @@ ui <- fluidPage(
     mainPanel(
       tabsetPanel(id = "inTabset", selected = "Map",
         tabPanel("Data",
-                 shinyDirButton('inputdir', label = "input select",
-                                title = "Select directory with rivertiles")
+                 h3("Select a model run or upload output from your own."),
+           tabsetPanel(id = "dataSource", selected = "Prerun", 
+             tabPanel("Prerun",
+               dataTableOutput("runs_table")
+             )
+           ),
+           shinyDirButton('inputdir', label = "input select",
+                          title = "Select directory with rivertiles")
         ),
         tabPanel("Map",
           actionButton("zoomButton", "Zoom to data"),

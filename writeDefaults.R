@@ -7,7 +7,8 @@ cachedir <- "rivertile-viz/cache/"
 
 rtdata_default <- get_rivertile_data(defaultdir)
 
-badnodes_default <- c(min(rtdata$rt_nodes$node_id), max(rtdata$rt_nodes$node_id),
+badnodes_default <- c(min(rtdata_default$rt_nodes$node_id), 
+                      max(rtdata_default$rt_nodes$node_id),
               flag_nodes(defaultdir))
 
 save(rtdata_default, file = sprintf("%s/rtdata.RData", cachedir))

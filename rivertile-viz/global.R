@@ -1,7 +1,9 @@
 # Globals for shiny app
 
 library(shinyFiles)
+library(shinythemes)
 library(rivertile)
+# devtools::load_all("~/Documents/rivertile")
 library(ncdf4)
 library(fs)
 library(ggplot2)
@@ -9,6 +11,7 @@ library(leaflet)
 library(purrr)
 library(dplyr)
 library(plotly)
+library(DT)
 
 ## ui.R objects
 val_vars <- c("height", "height2", "width", "area_total", "area_detct", 

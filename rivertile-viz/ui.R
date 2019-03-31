@@ -10,16 +10,18 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
       actionButton("flagtruth", "Auto-select nodes with ambiguous truth")
     ),
     mainPanel(
-      tabsetPanel(id = "inTabset", selected = "Map",
+      tabsetPanel(id = "inTabset", selected = "Data",
         tabPanel("Data",
-                 h3("Select a model run or upload output from your own."),
+           h3("Select a model run or upload output from your own."),
            tabsetPanel(id = "dataSource", selected = "Prerun", 
              tabPanel("Prerun",
-               dataTableOutput("runs_table")
+               dataTableOutput("runs_table"),
+               actionButton("loadDataset", "Load Selected Dataset")),
+             tabPanel("Upload",
+               shinyDirButton('inputdir', label = "input select",
+                              title = "Select directory with rivertiles")
              )
-           ),
-           shinyDirButton('inputdir', label = "input select",
-                          title = "Select directory with rivertiles")
+           )
         ),
         tabPanel("Map",
           actionButton("zoomButton", "Zoom to data"),

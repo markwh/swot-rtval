@@ -13,9 +13,11 @@ LoadToEnvironment <- function(url, env=new.env()) {
   return(env)
 }
 
-
-load(url("https://osu.box.com/shared/static/9ng2ys6kubcbkqu8riar0l89uzk101zr.rdata"))
-run_manifest <- read.csv("./roruns.csv", stringsAsFactors = FALSE)
+# default_data_url <- "https://osu.box.com/shared/static/9ng2ys6kubcbkqu8riar0l89uzk101zr.rdata"
+default_data_url <- NULL
+run_manifest <- read.csv("./roruns.csv", stringsAsFactors = FALSE) %>% 
+  dplyr::filter(!is.na(rtviz_url),
+                nchar(rtviz_url) > 0) 
 
 ####------------------------------------
 #### START OF SERVER FUNCTION ----------
@@ -32,8 +34,11 @@ function(input, output, session) {
                        case, pass, day = bndry_cond, 
                        smearing, land_sig0, water_sig0, 
                        gdem_preproc = grepl("preproc", gdem_name), notes) %>% 
-      datatable(filter = "top")
+      datatable(filter = "top", selection = "single")
   })
+  
+  # Load selected dataset when input$loadDataset is fired. 
+  
   
   # 
   
@@ -43,8 +48,8 @@ function(input, output, session) {
   
   
   datadir <- reactive({
-    if (is.null(input$dir)) { # REMOVE THIS LATER
-      parsed_dir <- "./data/sac188/"
+    if (is.null(input$dir)) { 
+      return(NULL)
     } else {
       dir <- input$inputdir
       parsed_dir <- parseDirPath(roots = roots, selection = dir)
@@ -56,16 +61,32 @@ function(input, output, session) {
   purgedNodes <- numeric(0) # Keep track of which nodes get manually purged
   
   # Full dataset from get_rivertile_data()
-  rtdata_full <- reactive({ 
+  loadCounter <- 0 # For data source branch logic in data_in
+  data_in <- reactive({ 
     
-    if (exists("rtdata_in") && 
-        is.null(input$dir)) return(rtdata_in)
-    
-    if (length(datadir()) == 0) return(NULL)
+    # Test whether loadDataset was fired--if so, get data from url
+    if (input$loadDataset > loadCounter) {
+      stopifnot(loadCounter == input$loadDataset - 1)
+      loadCounter <<- loadCounter + 1
+      
+      isolate(selrow <- input$runs_table_rows_selected)
+      if (!length(selrow)) {
+        message("No data selected")
+        return(data_in())
+      } else {
+        load(url(run_manifest$rtviz_url[selrow]))
+      }
+    } else if (length(datadir())) { # get data from folder selection
+      rtdata_in <- get_rivertile_data(dir = datadir())
+      badnodes_in <- flag_nodes(datadir())
+    } else if (length(default_data_url)) { # get default data from url
+      load(url(default_data_url)) 
+    } else return(NULL)
+
     purgedNodes <<- numeric(0) # reset purgedNodes
-    updateTabsetPanel(session, inputId = "inTabset", selected = "Map")
     
-    get_rivertile_data(dir = datadir())
+    updateTabsetPanel(session, inputId = "inTabset", selected = "Map")
+    return(list(rtdata_in = rtdata_in, badnodes_in = badnodes_in))    
     })
   
   # Node selection and purging
@@ -79,31 +100,24 @@ function(input, output, session) {
     updateCheckboxGroupInput(session, "selNodes", selected = character(0))
   })
   observeEvent(input$flagtruth, {
-    if (exists("badnodes_in") && 
-        is.null(input$dir)) {
-      flagnodes <- badnodes_in
-    } else {
-      flagnodes <- flag_nodes(datadir())
-    }
-    tosel <- intersect(currentNodes(), flagnodes)
+    badnodes <- data_in()$badnodes_in
+    tosel <- intersect(currentNodes(), badnodes)
     updateCheckboxGroupInput(session, "selNodes", selected = tosel)
   })
   
-  # Current dataset (subset of rtdata_full)
+  # Current dataset (subset of data_in)
   rtdata <- reactive({
-    if (is.null(rtdata_full())) return(NULL)
-    
+    if (is.null(data_in()$rtdata_in)) return(NULL)
     input$nodePurge
     input$nodeRestore
-    out <- purge_nodes(rtdata_full(), purgenodes = purgedNodes)
+    out <- purge_nodes(data_in()$rtdata_in, purgenodes = purgedNodes)
     out
   })
   
   currentNodes <- reactive({
     rtdat <- rtdata()
     if (is.null(rtdat)) {
-      return(checkboxGroupInput("selNodes", "Node", choices = NULL, 
-                                inline = TRUE))
+      return(NULL)
     }
     
     nodeids1 <- rtdat$rt_nodes$node_id
@@ -123,7 +137,7 @@ function(input, output, session) {
   
   # Color palette for reaches
   reachpal <- reactive({
-    reachids <- sort(unique(rtdata_full()$rt_reaches$reach_id))
+    reachids <- sort(unique(data_in()$rtdata_in$rt_reaches$reach_id))
     nreaches <- length(reachids)
     # viridisLite::viridis(n = nreaches) 
     dkcols <- RColorBrewer::brewer.pal(n = 8, name = "Set3")
@@ -177,12 +191,14 @@ function(input, output, session) {
   
   # Observer for node locations
   observe({
-    
+    req(input$inTabset == "Map") # https://github.com/rstudio/leaflet/issues/590#issuecomment-439444519
     locations <- riverNodeLocations()    
+    proxy <- leafletProxy("rtmap", data = locations)
     if (length(locations) == 0)
-      return(leafletProx("rtmap"))
+      # browser()
+      return(leafletProxy("rtmap"))
     if (input$showReaches) {
-      leafletProxy("rtmap", data = locations) %>% 
+      proxy %>% 
         addCircleMarkers(
           ~longitude,
           ~latitude,
@@ -193,7 +209,7 @@ function(input, output, session) {
         ) 
     } else {
       # browser()
-      leafletProxy("rtmap", data = locations) %>% 
+      proxy %>% 
         addCircleMarkers(
           ~longitude,
           ~latitude,
@@ -243,6 +259,7 @@ function(input, output, session) {
 
   # Observer to add pcv points
   observe({
+    req(input$inTabset == "Map") # https://github.com/rstudio/leaflet/issues/590#issuecomment-439444519
     input$pcv_plot
     if (is.null(pcv_selected()) || (nrow(pcv_selected()) == 0)) {
       leafletProxy("rtmap") %>% 
@@ -262,6 +279,7 @@ function(input, output, session) {
   
   # Observer for pcv points legend
   observe({
+    req(input$inTabset == "Map") # https://github.com/rstudio/leaflet/issues/590#issuecomment-439444519
     input$pcv_plot
     proxy <- leafletProxy("rtmap", data = pcv_selected())
     
@@ -278,7 +296,10 @@ function(input, output, session) {
   
   # Observer for selected nodes
   observe({
-    nodedat_ss <- riverNodeLocations() %>% 
+    req(input$inTabset == "Map") # https://github.com/rstudio/leaflet/issues/590#issuecomment-439444519
+    nodelocs <- riverNodeLocations()
+    if (!length(nodelocs)) return(leafletProxy("rtmap"))
+    nodedat_ss <- nodelocs %>% 
       dplyr::filter(node_id %in% input$selNodes)
     # browser()
     leafletProxy("rtmap", data = nodedat_ss) %>% 
@@ -290,6 +311,7 @@ function(input, output, session) {
   
   # Observer to add gdem pcv points
   observe({
+    req(input$inTabset == "Map") # https://github.com/rstudio/leaflet/issues/590#issuecomment-439444519
     input$gdem_pcv_plot
     if (is.null(pcv_gdem_selected()) || (nrow(pcv_gdem_selected()) == 0)) {
       leafletProxy("rtmap") %>% 

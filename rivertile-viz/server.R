@@ -48,7 +48,7 @@ function(input, output, session) {
   
   
   datadir <- reactive({
-    if (is.null(input$dir)) { 
+    if (is.null(input$inputdir)) { 
       return(NULL)
     } else {
       dir <- input$inputdir
@@ -195,7 +195,6 @@ function(input, output, session) {
     locations <- riverNodeLocations()    
     proxy <- leafletProxy("rtmap", data = locations)
     if (length(locations) == 0)
-      # browser()
       return(leafletProxy("rtmap"))
     if (input$showReaches) {
       proxy %>% 
@@ -208,7 +207,6 @@ function(input, output, session) {
           radius = 2
         ) 
     } else {
-      # browser()
       proxy %>% 
         addCircleMarkers(
           ~longitude,

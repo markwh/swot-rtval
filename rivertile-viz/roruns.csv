@@ -1,37 +1,37 @@
-﻿outroot,outno,fmtno,outdir,indir,priordb,case,pass,bndry_cond,smearing,land_sig0,water_sig0,gdem_name,notes,rtviz_url
+outroot,outno,fmtno,outdir,indir,priordb,case,pass,bndry_cond,smearing,land_sig0,water_sig0,gdem_name,notes,rtviz_url
 ./output/sac,1,1,./output/sac01,$SACDIR1,$PRIORLOC1,Sacramento,249,not_spec,not_spec,not_spec,not_spec,gdem_truth.LeftSwath.nc,1/25/19 pixc from Brent,https://osu.box.com/shared/static/ltg78si99xycpnyizfcs3wg97mz14r6c.Rdata
 ./output/sac,2,2,./output/sac02,$SACDIR1,$PRIORLOC2,Sacramento,249,not_spec,not_spec,not_spec,not_spec,gdem_truth.LeftSwath.nc,1/25/19 pixc from Brent,https://osu.box.com/shared/static/00t4latow69mlax09902k5qw6bc9z190.rdata
 ./output/sac,3,3,./output/sac03,$SACDIR2,$PRIORLOC1,Sacramento,249,109,50m,-5dB,10dB,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/30duel7pdx7m8mqyqnalaq5n4nvskmr8.rdata
 ./output/sac,4,4,./output/sac04,$SACDIR3,$PRIORLOC1,Sacramento,249,109,50m,68 pctile,3dB wind calc,gdem_truth.LeftSwath.nc,darkwater,https://osu.box.com/shared/static/d3kz6euemwlljosk7llgfu3mmwxwfevv.rdata
 ./output/sac,5,5,./output/sac05,$SACDIR4,$PRIORLOC1,Sacramento,249,109,50m,-100dB,3dB wind calc,gdem_truth.LeftSwath.nc,darkwater,https://osu.box.com/shared/static/73r3mufapgds85i4ntq44fe1vp68c3x6.rdata
 ./output/sac,6,6,./output/sac06,$SACDIR5,$PRIORLOC1,Sacramento,249,109,50m,-100dB,10dB,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/tabbdngum17n4j3nlb74r68sm6xy9hb3.rdata
-./output/sac,7,7,./output/sac07,$SACDIR6,$PRIORLOC1,Sacramento,249,220,50m,-5dB,10dB,gdem_truth.LeftSwath.nc,,
-./output/sac,8,8,./output/sac08,$SACDIR7,$PRIORLOC1,Sacramento,249,220,50m,68 pctile,3dB wind calc,gdem_truth.LeftSwath.nc,,
-./output/sac,9,9,./output/sac09,$SACDIR8,$PRIORLOC1,Sacramento,249,220,50m,-100dB,3dB wind calc,gdem_truth.LeftSwath.nc,,
-./output/sac,10,10,./output/sac10,$SACDIR9,$PRIORLOC1,Sacramento,249,220,50m,-100dB,10dB,gdem_truth.LeftSwath.nc,,
-./output/sac,11,11,./output/sac11,$SACDIR2,$PRIORLOC2,Sacramento,249,109,50m,-5dB,10dB,gdem_truth.LeftSwath.nc,,
-./output/sac,12,12,./output/sac12,$SACDIR3,$PRIORLOC2,Sacramento,249,109,50m,68 pctile,3dB wind calc,gdem_truth.LeftSwath.nc,,
-./output/sac,13,13,./output/sac13,$SACDIR4,$PRIORLOC2,Sacramento,249,109,50m,-100dB,3dB wind calc,gdem_truth.LeftSwath.nc,,
-./output/sac,14,14,./output/sac14,$SACDIR5,$PRIORLOC2,Sacramento,249,109,50m,-100dB,10dB,gdem_truth.LeftSwath.nc,,
-./output/sac,15,15,./output/sac15,$SACDIR6,$PRIORLOC2,Sacramento,249,220,50m,-5dB,10dB,gdem_truth.LeftSwath.nc,,
-./output/sac,16,16,./output/sac16,$SACDIR7,$PRIORLOC2,Sacramento,249,220,50m,68 pctile,3dB wind calc,gdem_truth.LeftSwath.nc,,
-./output/sac,17,17,./output/sac17,$SACDIR8,$PRIORLOC2,Sacramento,249,220,50m,-100dB,3dB wind calc,gdem_truth.LeftSwath.nc,,
+./output/sac,7,7,./output/sac07,$SACDIR6,$PRIORLOC1,Sacramento,249,220,50m,-5dB,10dB,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/3i0fykevrzwljkwvnan1zhiaf5yfg6sg.rdata
+./output/sac,8,8,./output/sac08,$SACDIR7,$PRIORLOC1,Sacramento,249,220,50m,68 pctile,3dB wind calc,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/gs1sfasqkcecx3spugryrodwn2ct2zxv.rdata
+./output/sac,9,9,./output/sac09,$SACDIR8,$PRIORLOC1,Sacramento,249,220,50m,-100dB,3dB wind calc,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/mbh9k4rb7nxjoed9e46xx5g3bflwbnb2.rdata
+./output/sac,10,10,./output/sac10,$SACDIR9,$PRIORLOC1,Sacramento,249,220,50m,-100dB,10dB,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/xmuan5dcc0rebes6s8x3usk2slc83n7g.rdata
+./output/sac,11,11,./output/sac11,$SACDIR2,$PRIORLOC2,Sacramento,249,109,50m,-5dB,10dB,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/t19kfnp8rjbixduyiyz6tmr4gf4epm5r.rdata
+./output/sac,12,12,./output/sac12,$SACDIR3,$PRIORLOC2,Sacramento,249,109,50m,68 pctile,3dB wind calc,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/izj8me0cjkeho63pvvfoi8ej02b90jes.rdata
+./output/sac,13,13,./output/sac13,$SACDIR4,$PRIORLOC2,Sacramento,249,109,50m,-100dB,3dB wind calc,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/3zc2nji10iwr11s89pdy0r2k2n0o3dik.rdata
+./output/sac,14,14,./output/sac14,$SACDIR5,$PRIORLOC2,Sacramento,249,109,50m,-100dB,10dB,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/ps8lh8wn8ju9mth7lk7s8btpi0t9c92z.rdata
+./output/sac,15,15,./output/sac15,$SACDIR6,$PRIORLOC2,Sacramento,249,220,50m,-5dB,10dB,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/xpdzk78oykypmekwbh0m4mwuzox83yxe.rdata
+./output/sac,16,16,./output/sac16,$SACDIR7,$PRIORLOC2,Sacramento,249,220,50m,68 pctile,3dB wind calc,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/102bl9bev30j4ij5vpyhl5ag1d0gmz8r.rdata
+./output/sac,17,17,./output/sac17,$SACDIR8,$PRIORLOC2,Sacramento,249,220,50m,-100dB,3dB wind calc,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/c4xtcykn11ziq0w5le306p24zifli61d.rdata
 ./output/sac,18,18,./output/sac18,$SACDIR9,$PRIORLOC2,Sacramento,249,220,50m,-100dB,10dB,gdem_truth.LeftSwath.nc,,https://osu.box.com/shared/static/9ng2ys6kubcbkqu8riar0l89uzk101zr.rdata
-./output/sac,19,19,./output/sac19,$SACDIR1,$PRIORLOC1,Sacramento,249,not_spec,not_spec,not_spec,not_spec,gdem_preproc.nc,1/25/19 pixc from Brent,
-./output/sac,20,20,./output/sac20,$SACDIR1,$PRIORLOC2,Sacramento,249,not_spec,not_spec,not_spec,not_spec,gdem_preproc.nc,1/25/19 pixc from Brent,
-./output/sac,21,21,./output/sac21,$SACDIR2,$PRIORLOC1,Sacramento,249,109,50m,-5dB,10dB,gdem_preproc.nc,,
-./output/sac,22,22,./output/sac22,$SACDIR3,$PRIORLOC1,Sacramento,249,109,50m,68 pctile,3dB wind calc,gdem_preproc.nc,darkwater,
-./output/sac,23,23,./output/sac23,$SACDIR4,$PRIORLOC1,Sacramento,249,109,50m,-100dB,3dB wind calc,gdem_preproc.nc,darkwater,
-./output/sac,24,24,./output/sac24,$SACDIR5,$PRIORLOC1,Sacramento,249,109,50m,-100dB,10dB,gdem_preproc.nc,,
-./output/sac,25,25,./output/sac25,$SACDIR6,$PRIORLOC1,Sacramento,249,220,50m,-5dB,10dB,gdem_preproc.nc,,
-./output/sac,26,26,./output/sac26,$SACDIR7,$PRIORLOC1,Sacramento,249,220,50m,68 pctile,3dB wind calc,gdem_preproc.nc,,
-./output/sac,27,27,./output/sac27,$SACDIR8,$PRIORLOC1,Sacramento,249,220,50m,-100dB,3dB wind calc,gdem_preproc.nc,,
-./output/sac,28,28,./output/sac28,$SACDIR9,$PRIORLOC1,Sacramento,249,220,50m,-100dB,10dB,gdem_preproc.nc,,
-./output/sac,29,29,./output/sac29,$SACDIR2,$PRIORLOC2,Sacramento,249,109,50m,-5dB,10dB,gdem_preproc.nc,,
-./output/sac,30,30,./output/sac30,$SACDIR3,$PRIORLOC2,Sacramento,249,109,50m,68 pctile,3dB wind calc,gdem_preproc.nc,,
-./output/sac,31,31,./output/sac31,$SACDIR4,$PRIORLOC2,Sacramento,249,109,50m,-100dB,3dB wind calc,gdem_preproc.nc,,
-./output/sac,32,32,./output/sac32,$SACDIR5,$PRIORLOC2,Sacramento,249,109,50m,-100dB,10dB,gdem_preproc.nc,,
-./output/sac,33,33,./output/sac33,$SACDIR6,$PRIORLOC2,Sacramento,249,220,50m,-5dB,10dB,gdem_preproc.nc,,
-./output/sac,34,34,./output/sac34,$SACDIR7,$PRIORLOC2,Sacramento,249,220,50m,68 pctile,3dB wind calc,gdem_preproc.nc,,
-./output/sac,35,35,./output/sac35,$SACDIR8,$PRIORLOC2,Sacramento,249,220,50m,-100dB,3dB wind calc,gdem_preproc.nc,,
-./output/sac,36,36,./output/sac36,$SACDIR9,$PRIORLOC2,Sacramento,249,220,50m,-100dB,10dB,gdem_preproc.nc,,
+./output/sac,19,19,./output/sac19,$SACDIR1,$PRIORLOC1,Sacramento,249,not_spec,not_spec,not_spec,not_spec,gdem_preproc.nc,1/25/19 pixc from Brent,https://osu.box.com/shared/static/d8kktil3gq0k3447bnpdb8qb0qaeu5cz.rdata
+./output/sac,20,20,./output/sac20,$SACDIR1,$PRIORLOC2,Sacramento,249,not_spec,not_spec,not_spec,not_spec,gdem_preproc.nc,1/25/19 pixc from Brent,https://osu.box.com/shared/static/x3pqij9dbz0xrxwiuu57us7p8ip9rkem.rdata
+./output/sac,21,21,./output/sac21,$SACDIR2,$PRIORLOC1,Sacramento,249,109,50m,-5dB,10dB,gdem_preproc.nc,,https://osu.box.com/shared/static/27k4buq0ef5jgr3d147slqfd8wcmegun.rdata
+./output/sac,22,22,./output/sac22,$SACDIR3,$PRIORLOC1,Sacramento,249,109,50m,68 pctile,3dB wind calc,gdem_preproc.nc,darkwater,https://osu.box.com/shared/static/02z036b1nqyyv3yqa9ys07hupc3yoohw.rdata
+./output/sac,23,23,./output/sac23,$SACDIR4,$PRIORLOC1,Sacramento,249,109,50m,-100dB,3dB wind calc,gdem_preproc.nc,darkwater,https://osu.box.com/shared/static/jrfu7x7029bvbfj4aqytx3dxzwtfi097.rdata
+./output/sac,24,24,./output/sac24,$SACDIR5,$PRIORLOC1,Sacramento,249,109,50m,-100dB,10dB,gdem_preproc.nc,,https://osu.box.com/shared/static/2rstt6ihoimmh8ijswx0m5352a55amrw.rdata
+./output/sac,25,25,./output/sac25,$SACDIR6,$PRIORLOC1,Sacramento,249,220,50m,-5dB,10dB,gdem_preproc.nc,,https://osu.box.com/shared/static/yb8c2894aa7gn7odlxd30tzwbiues3kt.rdata
+./output/sac,26,26,./output/sac26,$SACDIR7,$PRIORLOC1,Sacramento,249,220,50m,68 pctile,3dB wind calc,gdem_preproc.nc,,https://osu.box.com/shared/static/jdwqqdo1ir3lsbv6som3ha9z0tmtiqcd.rdata
+./output/sac,27,27,./output/sac27,$SACDIR8,$PRIORLOC1,Sacramento,249,220,50m,-100dB,3dB wind calc,gdem_preproc.nc,,https://osu.box.com/shared/static/9jwvej34o42w5ab32r8praxa7o2a4nh6.rdata
+./output/sac,28,28,./output/sac28,$SACDIR9,$PRIORLOC1,Sacramento,249,220,50m,-100dB,10dB,gdem_preproc.nc,,https://osu.box.com/shared/static/tvx9rgpngj1o1ufunmqw4qwf5i8bz9vd.rdata
+./output/sac,29,29,./output/sac29,$SACDIR2,$PRIORLOC2,Sacramento,249,109,50m,-5dB,10dB,gdem_preproc.nc,,https://osu.box.com/shared/static/p3g3kyqxljri19gce4u12ves89ncwui1.rdata
+./output/sac,30,30,./output/sac30,$SACDIR3,$PRIORLOC2,Sacramento,249,109,50m,68 pctile,3dB wind calc,gdem_preproc.nc,,https://osu.box.com/shared/static/oj0z37vewy67hex4gl1a9cfscn7fqkuc.rdata
+./output/sac,31,31,./output/sac31,$SACDIR4,$PRIORLOC2,Sacramento,249,109,50m,-100dB,3dB wind calc,gdem_preproc.nc,,https://osu.box.com/shared/static/595pjy9s4t5pnz5x6k9twbsnhg92vq8k.rdata
+./output/sac,32,32,./output/sac32,$SACDIR5,$PRIORLOC2,Sacramento,249,109,50m,-100dB,10dB,gdem_preproc.nc,,https://osu.box.com/shared/static/eqau87qxkk3lgyy8u1626a64phdmz5nt.rdata
+./output/sac,33,33,./output/sac33,$SACDIR6,$PRIORLOC2,Sacramento,249,220,50m,-5dB,10dB,gdem_preproc.nc,,https://osu.box.com/shared/static/de013b2fn2kps7a70bi6eitj2rirsxi2.rdata
+./output/sac,34,34,./output/sac34,$SACDIR7,$PRIORLOC2,Sacramento,249,220,50m,68 pctile,3dB wind calc,gdem_preproc.nc,,https://osu.box.com/shared/static/bazr1bfijsfmnoh2b7qwef0nprdkbjh9.rdata
+./output/sac,35,35,./output/sac35,$SACDIR8,$PRIORLOC2,Sacramento,249,220,50m,-100dB,3dB wind calc,gdem_preproc.nc,,https://osu.box.com/shared/static/jjfk23vn9i997g0azwksk6fzv5qtwiwk.rdata
+./output/sac,36,36,./output/sac36,$SACDIR9,$PRIORLOC2,Sacramento,249,220,50m,-100dB,10dB,gdem_preproc.nc,,https://osu.box.com/shared/static/i1vgacms2dpelue1aej462mtqn2efure.rdata

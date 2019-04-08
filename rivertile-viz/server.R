@@ -269,12 +269,13 @@ function(input, output, session) {
       # browser()
       leafletProxy("rtmap", data = pcv_selected()) %>% 
         clearGroup("pcv") %>% 
-        addCircleMarkers(~longitude, ~latitude, stroke = FALSE,
-                         radius = 8, fillOpacity = 0.7, 
-                         popup = ~paste(sprintf("reach: %s\nnode: %s", 
-                                                reach_id, node_id)),
-                         fillColor = ~classpal(classification),
-                         group = "pcv")
+        addCircles(~longitude, ~latitude, stroke = FALSE,
+                   radius = ~sqrt(pixel_area / pi), 
+                   fillOpacity = 0.8, 
+                   popup = ~paste(sprintf("reach: %s\nnode: %s", 
+                                          reach_id, node_id)),
+                   fillColor = ~classpal(classification),
+                   group = "pcv")
     }
   })
   
@@ -320,12 +321,13 @@ function(input, output, session) {
     } else {
       leafletProxy("rtmap", data = pcv_gdem_selected()) %>% 
         clearGroup("pcv_gdem") %>% 
-        addCircleMarkers(~longitude, ~latitude, radius = 4, stroke = FALSE,
-                         popup = ~paste(sprintf("reach: %s\nnode: %s", 
-                                                reach_id, node_id)),
-                         fillOpacity = 0.4,
-                         color = "red", 
-                         group = "pcv_gdem")  
+        addCircles(~longitude, ~latitude, radius = ~sqrt(pixel_area / pi), 
+                   stroke = FALSE,
+                   popup = ~paste(sprintf("reach: %s\nnode: %s", 
+                                          reach_id, node_id)),
+                   fillOpacity = 0.8,
+                   color = "red", 
+                   group = "pcv_gdem")  
     }
   })
   

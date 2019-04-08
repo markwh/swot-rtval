@@ -27,7 +27,7 @@ theme_set(theme_bw())
 # Variable selection
 pixc_vars_tokeep <- c("azimuth_index", "range_index", "classification", 
                       "num_rare_looks", "latitude", "longitude", "height", 
-                      "cross_track", "num_med_looks")
+                      "pixel_area", "water_frac", "cross_track", "num_med_looks")
 pixcvec_vars_tokeep <- c("azimuth_index", "range_index", "latitude_vectorproc", 
                          "longitude_vectorproc", "height_vectorproc", "node_index", 
                          "reach_index")

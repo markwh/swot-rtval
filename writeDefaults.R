@@ -9,7 +9,7 @@ rtdata_default <- get_rivertile_data(defaultdir)
 
 badnodes_default <- c(min(rtdata_default$rt_nodes$node_id), 
                       max(rtdata_default$rt_nodes$node_id),
-              flag_nodes(defaultdir))
+              ambiguous_nodes(defaultdir))
 
 save(rtdata_default, file = sprintf("%s/rtdata.RData", cachedir))
 save(badnodes_default, file = sprintf("%s/badnodes.RData", cachedir))

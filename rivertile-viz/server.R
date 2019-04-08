@@ -27,14 +27,15 @@ function(input, output, session) {
   #### DATA INPUT ####
   
   # Table of riverobs runs
-  output$runs_table <- renderDataTable({
-    run_manifest %>% 
+  output$runs_table <- renderDT({
+    # browser()
+    rundf <- run_manifest %>% 
       dplyr::transmute(run_id = outno, 
                        priordb = gsub("$PRIORLOC", "", priordb, fixed = TRUE), 
                        case, pass, day = bndry_cond, 
                        smearing, land_sig0, water_sig0, 
-                       gdem_preproc = grepl("preproc", gdem_name), notes) %>% 
-      datatable(filter = "top", selection = "single")
+                       gdem_preproc = grepl("preproc", gdem_name), notes)
+    rundf
   })
   
   # Load selected dataset when input$loadDataset is fired. 
@@ -78,7 +79,9 @@ function(input, output, session) {
       }
     } else if (length(datadir())) { # get data from folder selection
       rtdata_in <- get_rivertile_data(dir = datadir())
-      badnodes_in <- flag_nodes(datadir())
+      badnodes1 <- ambiguous_nodes(datadir())
+      badnodes2 <- mismatch_nodes(rtdata_in$rt_nodes, rtdata_in$gdem_nodes)
+      badnodes_in <- union(badnodes1, badnodes2)
     } else if (length(default_data_url)) { # get default data from url
       load(url(default_data_url)) 
     } else return(NULL)
@@ -464,7 +467,6 @@ function(input, output, session) {
                    size = 5, data = plotdata_reach)
     }
     
-    
     gg + theme(legend.position = "none")
   })
   
@@ -473,6 +475,15 @@ function(input, output, session) {
     ggplotly(val_scatter_plot(), tooltip = "text")
   })
   
+  output$nodearea_plot <- renderPlot({
+    plotdata <- rtdata()$rt_pixc
+    plotdata$node_index <- plotdata$node_id
+    plotdata$reach_index <- plotdata$reach_id
+    trunode <- rtdata()$gdem_nodes
+    
+    outgg <- nodearea_plot(plotdata, nodes = input$selNodes, node_truth = trunode)
+    outgg
+  })
   
   # Stats tables --------
   output$stat_table <- renderTable({

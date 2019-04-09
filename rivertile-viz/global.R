@@ -38,8 +38,9 @@ nodecolor_sel <- "#0039e6"
 
 # Pixc(vec) color legend
 classes <- c(1, 2, 3, 4, 22, 23, 24)
-classlabs <- c("gdem_water", "land_near_water", "water_near_land", "open_water",
-               "land_near_dark_water", "dark_water_edge", "dark_water")
+classlabs <- c("gdem water", "land near water", "water near land", 
+               "open water", "land near dark water", 
+               "dark water edge", "dark water")
 classpal <- colorFactor(palette = "Set1", domain = classes)
 
 # Data funcitons

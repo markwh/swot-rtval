@@ -4,6 +4,7 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
     sidebarPanel(
       actionButton("nodeSelClear", "Clear Selected Nodes"),
       checkboxInput("showReaches", "Show Reaches", value = FALSE),
+      uiOutput("reachSelect", inline = TRUE),
       uiOutput("nodeSelect", inline = TRUE),
       actionButton("nodePurge", "Remove Selected Nodes"),
       actionButton("nodeRestore", "Restore All Nodes"), 

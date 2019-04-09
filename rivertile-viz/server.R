@@ -92,6 +92,20 @@ function(input, output, session) {
     return(list(rtdata_in = rtdata_in, badnodes_in = badnodes_in))    
     })
   
+  
+  # dynamic UI element for node/reach selection based on rtdata()
+  output$nodeSelect <- renderUI({
+    checkboxGroupInput("selNodes", "Node", choices = currentNodes(), 
+                       inline = TRUE)
+  })
+  output$reachSelect <- renderUI({
+    reachids <- if (is.null(rtdata())) NULL else 
+      unique(rtdata()$rt_node$reach_id)
+    
+    checkboxGroupInput("selReaches", "Reach", 
+                       choices = reachids, inline = TRUE)
+  })
+  
   # Node selection and purging
   observeEvent(input$nodePurge, {
     purgedNodes <<- unique(c(purgedNodes, input$selNodes))
@@ -101,12 +115,19 @@ function(input, output, session) {
   })
   observeEvent(input$nodeSelClear, {
     updateCheckboxGroupInput(session, "selNodes", selected = character(0))
+    updateCheckboxGroupInput(session, "selReaches", selected = character(0))
   })
   observeEvent(input$flagtruth, {
     badnodes <- data_in()$badnodes_in
     tosel <- intersect(currentNodes(), badnodes)
     updateCheckboxGroupInput(session, "selNodes", selected = tosel)
   })
+  observeEvent(length(input$selReaches), {
+    reachvals <- rtdata()$rt_nodes[c("node_id", "reach_id")]
+    tosel <- reachvals$node_id[reachvals$reach_id %in% input$selReaches]
+    updateCheckboxGroupInput(session, "selNodes", selected = tosel)
+  })
+  
   
   # Current dataset (subset of data_in)
   rtdata <- reactive({
@@ -119,9 +140,7 @@ function(input, output, session) {
   
   currentNodes <- reactive({
     rtdat <- rtdata()
-    if (is.null(rtdat)) {
-      return(NULL)
-    }
+    if (is.null(rtdat)) return(NULL)
     
     nodeids1 <- rtdat$rt_nodes$node_id
     nodeids2 <- rtdat$gdem_nodes$node_id
@@ -132,10 +151,7 @@ function(input, output, session) {
     nodeNums
   })
   
-  # dynamic UI element for node selection based on nodes in rtdata()
-  output$nodeSelect <- renderUI({
-    checkboxGroupInput("selNodes", "Node", choices = currentNodes(), inline = TRUE)
-  })
+
   
   
   # Color palette for reaches
@@ -290,9 +306,8 @@ function(input, output, session) {
     proxy %>% clearControls()
     if (input$pcv_plot) {
       proxy %>% addLegend(position = "topright",
-        colors = RColorBrewer::brewer.pal(7, "Set1"),
-        labels = c("land", "land_near_water", "water_near_land", "open_water",
-                   "land_near_dark_water", "dark_water_edge", "dark_water"))
+        colors = classpal(classes),
+        labels = classlabs)
     }
   })  
   

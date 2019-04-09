@@ -36,7 +36,7 @@ function(input, output, session) {
                        smearing, land_sig0, water_sig0, 
                        gdem_preproc = grepl("preproc", gdem_name), notes)
     rundf
-  })
+  }, selection = "single")
   
   # Load selected dataset when input$loadDataset is fired. 
   
@@ -326,7 +326,7 @@ function(input, output, session) {
                    popup = ~paste(sprintf("reach: %s\nnode: %s", 
                                           reach_id, node_id)),
                    fillOpacity = 0.8,
-                   color = "red", 
+                   color = ~classpal(1), 
                    group = "pcv_gdem")  
     }
   })
@@ -396,86 +396,149 @@ function(input, output, session) {
     ggplotly(val_qq_plot(), tooltip = "text")
   })
   
-  # gg object for scatterplot
-  val_scatter_plot <- reactive({
+  
 
-    plotdata <- valdata_node() %>% 
-      dplyr::filter(variable %in% input$plot_vars) %>% 
-      dplyr::mutate(isSel = (node_id %in% input$selNodes),
-                    rel_err = pixc_err / sigma_est,
-                    plotcolor = case_when(
-                      input$showReaches ~ reachpal()(reach_id),
-                      !input$showReaches & isSel ~ nodecolor_sel, 
-                      !input$showReaches & !isSel ~ nodecolor_unsel))
-    
-    # Manually add in the selected x and y axis variable names
-    plotdata$yvalue <- plotdata[[input$scatter_y]]
-    plotdata$xvalue <- plotdata[[input$scatter_x]]
-    if (input$scatter_y == "pixc_val") {
-      plotdata$ymiddle <- plotdata$gdem_val 
-    } else {plotdata$ymiddle <- 0}
-    if (input$scatter_y == "rel_err") {
-      plotdata$ysigma <- 1 
-    } else {plotdata$ysigma <- plotdata$sigma_est}
-    
-    # create the plot
-    gg <- ggplot(plotdata, aes(x = xvalue)) +
-      geom_ribbon(aes(ymin = ymiddle - 1.96 * ysigma, 
-                      ymax = ymiddle + 1.96 * ysigma), 
-                  fill = "pink") +
-      geom_ribbon(aes(ymin = ymiddle - ysigma, ymax = ymiddle + ysigma), 
-                  fill = "#7780ff") +
-      geom_point(aes(y = yvalue, color = plotcolor, size = isSel, text = node_id)) +
-      scale_color_identity(guide = FALSE) +
-      scale_size_manual(values = c(1, 3), guide = FALSE) +
-      facet_wrap(~variable, scales = "free") +
-      ylab(input$scatter_y) + xlab(input$scatter_x)
-    
-    # Overlay reach data
-    if (input$showReaches) {
-      
-      # need a node_id for reaches (use median)
-      nodeiddf <- plotdata %>% 
-        group_by(reach_id) %>% 
-        summarize(node_id = median(node_id))
-      
-      plotdata_reach <- valdata_reach() %>% 
-        left_join(nodeiddf, by = "reach_id") %>% 
-        dplyr::filter(variable %in% input$plot_vars) %>% 
-        mutate(plotcolor = reachpal()(reach_id), 
-               rel_err = pixc_err / sigma_est)
-      plotdata_reach$yvalue <- plotdata_reach[[input$scatter_y]]
-      plotdata_reach$xvalue <- plotdata_reach[[input$scatter_x]]
-      
-      if (input$scatter_y == "pixc_val") {
-        plotdata_reach$ymiddle <- plotdata_reach$gdem_val 
-      } else {plotdata_reach$ymiddle <- 0}
-      if (input$scatter_y == "rel_err") {
-        plotdata_reach$ysigma <- 1 
-      } else {plotdata_reach$ysigma <- plotdata_reach$sigma_est}
-      
-      gg <- gg + 
-        geom_linerange(aes(ymin = ymiddle - 1.96 * ysigma,
-                           ymax = ymiddle + 1.96 * ysigma),
-                       size = 0.5, data = plotdata_reach, 
-                       color = "#b3b3b3") +
-        geom_linerange(aes(ymin = ymiddle - ysigma,
-                           ymax = ymiddle + ysigma),
-                        size = 1, data = plotdata_reach,
-                       color = "#666666") +
-        geom_point(aes(y = yvalue, 
-                       color = plotcolor,
-                       text = paste0("Reach: ", reach_id)), 
-                   size = 5, data = plotdata_reach)
-    }
-    
-    gg + theme(legend.position = "none")
+  # gg object for scatterplot
+  val_scatter_gg <- reactive({
+    # browser()
+    gg <- rt_val_scatter(valdata_node(), variables = input$plot_vars, 
+                         xvar = input$scatter_x, yvar = input$scatter_y) + 
+      theme(legend.position = "none")
+    gg
   })
   
-  # plotly render for scatterplot
-  output$val_scatter_plotly <- renderPlotly({
-    ggplotly(val_scatter_plot(), tooltip = "text")
+  # plot data for scatterplot (will be used in proxies)
+  val_scatter_data <- reactive({
+    val_scatter_gg()$data
   })
+  
+  # scatterplot plotly
+  output$val_scatterplot <- renderPlotly({
+    # browser()
+    gg <- val_scatter_gg()
+    
+    # overlay reaches if selected
+    if (input$showReaches) {
+      gg <- gg + reach_errorbar() + reach_scatter()
+    }
+    
+    # add selected nodes, if any
+    if (length(input$selNodes)) {
+      gg <- gg + selnode_scatter()
+    }
+    
+    ggplotly(gg, tooltip = "text")
+    # plotdata <- valdata_node() %>% 
+    #   dplyr::filter(variable %in% input$plot_vars) %>% 
+    #   dplyr::mutate(isSel = (node_id %in% input$selNodes),
+    #                 rel_err = pixc_err / sigma_est,
+    #                 plotcolor = case_when(
+    #                   input$showReaches ~ reachpal()(reach_id),
+    #                   !input$showReaches & isSel ~ nodecolor_sel, 
+    #                   !input$showReaches & !isSel ~ nodecolor_unsel))
+    # 
+    
+    # # Manually add in the selected x and y axis variable names
+    # plotdata$yvalue <- plotdata[[input$scatter_y]]
+    # plotdata$xvalue <- plotdata[[input$scatter_x]]
+    # if (input$scatter_y == "pixc_val") {
+    #   plotdata$ymiddle <- plotdata$gdem_val 
+    # } else {plotdata$ymiddle <- 0}
+    # if (input$scatter_y == "rel_err") {
+    #   plotdata$ysigma <- 1 
+    # } else {plotdata$ysigma <- plotdata$sigma_est}
+    # 
+    # # create the plot
+    # gg <- ggplot(plotdata, aes(x = xvalue)) +
+    #   geom_ribbon(aes(ymin = ymiddle - 1.96 * ysigma, 
+    #                   ymax = ymiddle + 1.96 * ysigma), 
+    #               fill = "pink") +
+    #   geom_ribbon(aes(ymin = ymiddle - ysigma, ymax = ymiddle + ysigma), 
+    #               fill = "#7780ff") +
+    #   geom_point(aes(y = yvalue, color = plotcolor, size = isSel, text = node_id)) +
+    #   scale_color_identity(guide = FALSE) +
+    #   scale_size_manual(values = c(1, 3), guide = FALSE) +
+    #   facet_wrap(~variable, scales = "free") +
+    #   ylab(input$scatter_y) + xlab(input$scatter_x)
+    # 
+    # # Overlay reach data
+    # if (input$showReaches) {
+    #   
+    #   # need a node_id for reaches (use median)
+    #   nodeiddf <- plotdata %>% 
+    #     group_by(reach_id) %>% 
+    #     summarize(node_id = median(node_id))
+    #   
+    #   plotdata_reach <- valdata_reach() %>% 
+    #     left_join(nodeiddf, by = "reach_id") %>% 
+    #     dplyr::filter(variable %in% input$plot_vars) %>% 
+    #     mutate(plotcolor = reachpal()(reach_id), 
+    #            rel_err = pixc_err / sigma_est)
+    #   plotdata_reach$yvalue <- plotdata_reach[[input$scatter_y]]
+    #   plotdata_reach$xvalue <- plotdata_reach[[input$scatter_x]]
+    #   
+    #   if (input$scatter_y == "pixc_val") {
+    #     plotdata_reach$ymiddle <- plotdata_reach$gdem_val 
+    #   } else {plotdata_reach$ymiddle <- 0}
+    #   if (input$scatter_y == "rel_err") {
+    #     plotdata_reach$ysigma <- 1 
+    #   } else {plotdata_reach$ysigma <- plotdata_reach$sigma_est}
+    #   
+    #   gg <- gg + 
+    #     geom_linerange(aes(ymin = ymiddle - 1.96 * ysigma,
+    #                        ymax = ymiddle + 1.96 * ysigma),
+    #                    size = 0.5, data = plotdata_reach, 
+    #                    color = "#b3b3b3") +
+    #     geom_linerange(aes(ymin = ymiddle - ysigma,
+    #                        ymax = ymiddle + ysigma),
+    #                     size = 1, data = plotdata_reach,
+    #                    color = "#666666") +
+    #     geom_point(aes(y = yvalue, 
+    #                    color = plotcolor,
+    #                    text = paste0("Reach: ", reach_id)), 
+    #                size = 5, data = plotdata_reach)
+    # }
+  })
+  
+  # observer for selected nodes (scatterplot) [currently a reactive while I learn plotly]
+  selnode_scatter <- reactive({
+    ggdat <- val_scatter_data() %>%
+      dplyr::filter(node_id %in% input$selNodes)
+
+    geom_point(aes(y = yval, text = node_id), size = 3, 
+               color = nodecolor_sel, data = ggdat)
+  })
+  
+  # Observer for reaches (scatterplot) [currently a reactive]
+  reach_scatterdata <- reactive({
+    
+      nodeiddf <- val_scatter_data() %>%
+        group_by(reach_id) %>%
+        summarize(node_id = median(node_id))
+    
+    reachdf <- rt_val_scatter(valdata_reach(), variables = input$plot_vars, 
+                              xvar = input$scatter_x, yvar = input$scatter_y,
+                              plot = FALSE) %>% 
+      left_join(nodeiddf, by = "reach_id")
+    if (input$scatter_x == "id") reachdf$xval <- reachdf$node_id
+    reachdf
+  })
+  reach_scatter <- reactive({
+
+    out <- geom_point(aes(y = yval,
+                       color = reachpal()(reach_id),
+                       text = paste0("Reach: ", reach_id)),
+                   size = 5, data = reach_scatterdata())
+    out
+  })
+  reach_errorbar <- reactive({
+    out <- geom_linerange(aes(ymin = ymiddle - 1.96 * ysigma,
+                              ymax = ymiddle + 1.96 * ysigma),
+                          size = 0.5, data = reach_scatterdata(),
+                          color = "#b3b3b3") 
+    out
+  })
+
   
   output$nodearea_plot <- renderPlot({
     plotdata <- rtdata()$rt_pixc

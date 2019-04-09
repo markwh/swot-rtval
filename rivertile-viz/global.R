@@ -16,7 +16,7 @@ library(DT)
 ## ui.R objects
 val_vars <- c("height", "height2", "width", "area_total", "area_detct", 
               "slope")
-scatter_vars <- c("Node ID" = "node_id", "No. Pixels" = "n_good_pix", 
+scatter_vars <- c("Node ID" = "id", "No. Pixels" = "n_good_pix", 
                   "X-track Distance" = "xtrk_dist", 
                   "Est. Uncertainty" = "sigma_est")
 
@@ -38,7 +38,7 @@ nodecolor_sel <- "#0039e6"
 
 # Pixc(vec) color legend
 classes <- c(1, 2, 3, 4, 22, 23, 24)
-classlabs <- c("land", "land_near_water", "water_near_land", "open_water",
+classlabs <- c("gdem_water", "land_near_water", "water_near_land", "open_water",
                "land_near_dark_water", "dark_water_edge", "dark_water")
 classpal <- colorFactor(palette = "Set1", domain = classes)
 

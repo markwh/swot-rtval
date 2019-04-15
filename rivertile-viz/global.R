@@ -2,8 +2,8 @@
 
 library(shinyFiles)
 library(shinythemes)
-library(rivertile)
-# devtools::load_all("~/Documents/rivertile")
+# library(rivertile)
+devtools::load_all("~/Documents/rivertile")
 library(ncdf4)
 library(fs)
 library(ggplot2)
@@ -70,14 +70,30 @@ get_rivertile_data <- function(dir, truth = "gdem") {
   out
 }
 
+
+redo_reach <- function(reachdata, nodedata, weight = TRUE) {
+  # browser()
+  reachdf0 <- nodedata %>% 
+    reach_agg(weight = weight)
+  commonnames <- intersect(names(reachdata), names(reachdf0))
+  reachdata[commonnames] <- reachdf0[commonnames]
+  reachdata
+}
+
 #' Function to remove nodes from an rtdata set--that is, a list of data.frames.
-purge_nodes <- function(rtdata, purgenodes = numeric(0)) {
+purge_nodes <- function(rtdata, purgenodes = numeric(0), 
+                        redo_reaches = TRUE) {
+  # browser()
   if (length(purgenodes) == 0) return(rtdata)
   reachinds <- grep("reach", names(rtdata))
   purgefun <- function(x) x[!(x[["node_id"]] %in% purgenodes), ]
   
   out <- rtdata
   out[-reachinds] <- lapply(rtdata[-reachinds], purgefun)
+  if (redo_reaches) {
+    out$rt_reaches <- redo_reach(rtdata$rt_reaches, out$rt_nodes)
+    out$gdem_reaches <- redo_reach(rtdata$gdem_reaches, out$gdem_nodes, weight = FALSE)
+  }
   out
 }
 

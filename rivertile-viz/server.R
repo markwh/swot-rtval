@@ -86,6 +86,13 @@ function(input, output, session) {
       load(url(default_data_url)) 
     } else return(NULL)
 
+    # Add node values needed for reach aggregation.
+    rtdata_in$rt_nodes <- rtdata_in$rt_nodes %>% 
+      add_nodelen() %>% add_offset(reachdata = rtdata_in$rt_reaches)
+    rtdata_in$gdem_nodes <- rtdata_in$gdem_nodes %>% 
+      add_nodelen() %>% add_offset(reachdata = rtdata_in$gdem_reaches)
+    rtdata_in$rt_pixc$pixel_id <- 1:nrow(rtdata_in$rt_pixc) # manually assign pixel ID
+    
     purgedNodes <<- numeric(0) # reset purgedNodes
     
     updateTabsetPanel(session, inputId = "inTabset", selected = "Map")

@@ -2,8 +2,8 @@
 
 library(shinyFiles)
 library(shinythemes)
-# library(rivertile)
-devtools::load_all("~/Documents/rivertile")
+library(rivertile)
+# devtools::load_all("~/Documents/rivertile")
 library(ncdf4)
 library(fs)
 library(ggplot2)
@@ -82,7 +82,7 @@ redo_reach <- function(reachdata, nodedata, weight = TRUE) {
 
 #' Function to remove nodes from an rtdata set--that is, a list of data.frames.
 purge_nodes <- function(rtdata, purgenodes = numeric(0), 
-                        redo_reaches = TRUE) {
+                        redo_reaches = FALSE) {
   # browser()
   if (length(purgenodes) == 0) return(rtdata)
   reachinds <- grep("reach", names(rtdata))

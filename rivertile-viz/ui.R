@@ -30,7 +30,8 @@ ui <- fluidPage(theme = shinytheme("sandstone"),
           checkboxInput("pcv_plot", "Plot PIXC(vec) for selected nodes"),
           checkboxInput("gdem_pcv_plot", "Plot gdem PIXC(vec) for selected nodes"),
           radioButtons("pcv_geoloc", "PIXC geolocation type", 
-                       choices = c(med = "medium", wd = "well-done (PIXCvec)")),
+                       choiceNames = c("medium", "well-done (PIXCvec)"),
+                       choiceValues = c("med", "wd")),
           leafletOutput("rtmap", height = 700)
           
         ),
